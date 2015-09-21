@@ -2,6 +2,23 @@
 
 (require sha)
 
+(provide
+ (contract-out
+  [compute-hash (-> string? qtr-num? lab-num? bytes?)]))
+
+;; a legal quarter number
+(define (qtr-num? x)
+  (and (exact-integer? x)
+       (<= 1000 x)
+       (= 0 (modulo x 2))
+       (not (= 0 (modulo x 10)))))
+
+;; a legal lab number. There's no reason for
+;; the restriction, it's just intended to catch
+;; accidental transposes of quarter-number and
+;; lab-number
+(define lab-num? (integer-in 1 20))
+
 ;; given two bytes, return the list of bytes in between (inclusive)
 (define (char-range start finish)
  (range (first (bytes->list start))
@@ -11,8 +28,7 @@
   (append
    (char-range #"a" #"z")
    #;(char-range #"A" #"Z")
-   (char-range #"0" #"9")
-   (bytes->list #".-")))
+   (bytes->list #"023456789")))
 
 (define CHAR-BITS 5)
 
@@ -34,8 +50,9 @@
    (file->lines
     (build-path (find-system-path 'home-dir) ".ssh" "lab-code-secret"))))
 
-(define (hash-user-lab id qtr labnum)
-  
+;; given an id, a quarter, and a lab number, generate the secret code
+;; that the student should enter:
+(define (compute-hash id qtr labnum) 
   (define sha-bytes
     (sha256
      (string->bytes/utf-8
@@ -50,6 +67,3 @@
      (list-ref regular-bytes
                (bitwise-and (sub1 (expt 2 CHAR-BITS)) bit-source)))))
 
-(hash-user-lab "clements" 2158 3)
-(for/list ([lab 10])
-  (hash-user-lab "clements" 2158 lab))
