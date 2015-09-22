@@ -16,7 +16,8 @@
 
 (define (log-labcode-info fmt-string . args)
   (apply printf fmt-string args)
-  (newline))
+  (newline)
+  (flush-output))
 
 ;; log a "successful" line
 (define (log-successes login data)
