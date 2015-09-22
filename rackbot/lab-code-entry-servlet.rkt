@@ -15,7 +15,8 @@
 ;; a small servlet that allows students to enter their lab numbers
 
 (define (log-labcode-info fmt-string . args)
-  (apply printf fmt-string args))
+  (apply printf fmt-string args)
+  (newline))
 
 ;; log a "successful" line
 (define (log-successes login data)
