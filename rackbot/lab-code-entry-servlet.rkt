@@ -14,7 +14,8 @@
 
 ;; a small servlet that allows students to enter their lab numbers
 
-(define-logger labcode)
+(define (log-labcode-info fmt-string . args)
+  (apply printf fmt-string args))
 
 ;; log a "successful" line
 (define (log-successes login data)
@@ -114,10 +115,14 @@
 
 (module+ main
   ;; start the servlet on port 8026
-  (serve/servlet start
-                 #:port 8026
-                 #:listen-ip #f
-                 #:launch-browser? #f)  )
+  (with-handlers ([(λ (exn) #t)
+                   (λ (exn)
+                     (log-error (exn-message exn))
+                     (raise exn))])
+    (serve/servlet start
+                   #:port 8026
+                   #:listen-ip #f
+                   #:launch-browser? #f))  )
 
 
 
