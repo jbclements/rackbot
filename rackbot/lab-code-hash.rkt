@@ -26,6 +26,7 @@
 
 (define regular-bytes
   (append
+   ;; remove the letter 'o' next quarter...
    (char-range #"a" #"z")
    #;(char-range #"A" #"Z")
    (bytes->list #"023456789")))
@@ -66,4 +67,6 @@
                                 CHARS)])
      (list-ref regular-bytes
                (bitwise-and (sub1 (expt 2 CHAR-BITS)) bit-source)))))
+
+
 
