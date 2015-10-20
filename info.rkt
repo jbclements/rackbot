@@ -4,8 +4,9 @@
 
 (define deps
   (list "base"
-        "sha"))
+        "sha"
+        "web-server-lib"))
 
 (define build-deps
-  (list ))
+  (list "rackunit-lib"))
 
