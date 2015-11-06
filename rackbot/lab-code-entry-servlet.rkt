@@ -94,7 +94,7 @@
 
 ;; start the interaction
 (define (start req)
-  (send/finish
+  (send/suspend
    (response/xexpr
     `(html
       (body
