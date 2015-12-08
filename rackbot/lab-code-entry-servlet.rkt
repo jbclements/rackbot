@@ -38,6 +38,8 @@
 ;; actually doesn't return...
 (define (handle-bindings logins pairs)
   (match logins
+    [(list "")
+     (no-login-page)]
     [(list login)
      (define nonempties
        (filter (lambda (pr)
@@ -73,7 +75,13 @@
                                    (3 "w46vi3")
                                    (4 "abchtd")))
                 (success-page '(3)
-                              '(1 4))))
+                              '(1 4)))
+
+  (check-equal? (handle-bindings '("")
+                                 '((1 "zzzz")
+                                   (3 "w46vi3")
+                                   (4 "abchtd")))
+                (no-login-page)))
 
 ;; the formlet that accepts a completion number
 (define (lab-formlet n)
@@ -111,6 +119,10 @@
     (p "If you see failures, don't panic. Perhaps you entered "
        "the number wrong, or perhaps I gave it to you wrong. "
        "Find me and we'll figure it out.")))
+
+(define (no-login-page)
+  `((p "It looks like you left the `login` box blank. Go back "
+       "and try again.")))
 
 
 
