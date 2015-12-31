@@ -24,12 +24,13 @@
  (range (first (bytes->list start))
         (add1 (first (bytes->list finish)))))
 
+
+(define o-char (first (bytes->list #"o")))
 (define regular-bytes
   (append
-   ;; remove the letter 'o' next quarter...
-   (char-range #"a" #"z")
-   #;(char-range #"A" #"Z")
-   (bytes->list #"023456789")))
+   (bytes->list #"023456789")
+   (remove o-char (char-range #"a" #"z"))
+   ))
 
 (define CHAR-BITS 5)
 

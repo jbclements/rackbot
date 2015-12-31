@@ -10,7 +10,7 @@
          racket/list
          "lab-code-hash.rkt")
 
-(define THIS-QTR 2158)
+(define THIS-QTR 2162)
 
 ;; a small servlet that allows students to enter their lab numbers
 
@@ -70,10 +70,13 @@
 
 (module+ test
   (require rackunit)
+  (define clements-lab-3-code (bytes->string/utf-8
+                               (compute-hash "clements" THIS-QTR 3)))
   (check-equal? (handle-bindings '("clements")
-                                 '((1 "zzzz")
-                                   (3 "w46vi3")
-                                   (4 "abchtd")))
+                                 `((1 "zzzz")
+                                   (3 ,clements-lab-3-code)
+                                   ;; this one should fail:
+                                   (4 ,clements-lab-3-code)))
                 (success-page '(3)
                               '(1 4)))
 
