@@ -106,12 +106,13 @@
 ;; start the interaction
 (define (start req)
   (send/suspend
+   (lambda (url)
    (response/xexpr
     `(html
       (body
        ,@(apply
           handle-bindings
-          (send/formlet whole-lab-formlet)))))))
+          (send/formlet whole-lab-formlet))))))))
 
 ;; display a success page (incl. successes and failures)
 (define (success-page successes failures)
