@@ -19,6 +19,9 @@
 
 (define-type User String)
 (define-type Labnum Natural)
+(define-type NotSuccess 'not-success)
+(define-type Success (List User Time (Listof Labnum)))
+(define-type LogLine (U NotSuccess Success))
 (define-type Info (List User (Listof Labnum)))
 (define-type Infos (Listof Info))
 
@@ -38,18 +41,18 @@
 (: successes-since (Natural -> Infos))
 (define (successes-since t)
   (path->successes LOG-PATH
-                   (λ (i) (<= t (time-seconds i)))))
+                   (λ (i) (<= t (time-second i)))))
 
 ;; return all of the recorded successes in a given file
 ;; that satisfy the time-pred
 (: path->successes (Path-String Time-Pred -> Infos))
 (define (path->successes path time-pred)
-  (define lines (file->lines path))
+  (define lines (map parse-line (file->lines path)))
   (define successes (lines->successes lines time-pred))
   (group-successes successes))
 
 ;; group successes by user
-(: group-successes ((Listof String) -> Infos))
+(: group-successes ((Listof LabLine) -> (Listof Info)))
 (define (group-successes lines)
   (: successes (Listof Info))
   (define successes
@@ -63,28 +66,20 @@
                                           group)))
            <))))
 
-;; given a list of lines, return the Infos of the successes whose timestamps
-;; satisfy the given predicate
-(: lines->successes ((Listof String) -> (Listof Info)))
-(define (lines->successes lines pred)
-  (for/list ([l lines]
-             #:when (keep? l pred))
-    (parse l)))
-
-
 
 ;; given a line, return false if it doesn't match the success
 ;; regexp, or a list containing two strings otherwise
-(: process-line (String -> (U False (List User (Listof Labnum)))))
-(define (process-line l) 
+(: parse-line (String -> LogLine))
+(define (parse-line l)
   (match (regexp-match SUCCESS-REGEXP l)
-    [#f #f]
-    [(list _1 (? string? id) (? string? labs))
+    [#f 'not-success]
+    [(list _1 (? string? timestamp) (? string? id) (? string? labs))
+     (define ts (parse-tai64n timestamp))
      (: nums (Listof Natural))
      (define nums
        (match (read (open-input-string labs))
          [(? ListOfNats? lon) lon]))
-     (list id nums)]
+     (list id ts nums)]
     [other
      (error 'parse-successes
             "internal error, regexp didn't produce expected result")]))
@@ -96,7 +91,7 @@
 
 
 (define SUCCESS-REGEXP
-  #px"^@[0-9a-f]+ successes: \"([^\"]+)\" (.*)$")
+  #px"^@([0-9a-f]+) successes: \"([^\"]+)\" (.*)$")
 
 
 (module+ test
