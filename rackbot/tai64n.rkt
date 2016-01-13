@@ -12,6 +12,9 @@
                             'time-thread
                             'time-utc))
 
+(provide parse-tai64n
+         Time)
+
 ;; parses a tai64n time, following
 ;; http://cr.yp.to/libtai/tai64.html#tai64n
 
