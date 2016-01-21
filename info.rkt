@@ -5,8 +5,11 @@
 (define deps
   (list "base"
         "sha"
-        "web-server-lib"))
+        "web-server-lib"
+        "srfi-lite-lib"
+        "typed-racket-lib"))
 
 (define build-deps
-  (list "rackunit-lib"))
+  (list "rackunit-lib"
+        "typed-racket-more"))
 
