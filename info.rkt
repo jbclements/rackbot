@@ -7,7 +7,8 @@
         "sha"
         "web-server-lib"
         "srfi-lite-lib"
-        "typed-racket-lib"))
+        "typed-racket-lib"
+        "molis-hai"))
 
 (define build-deps
   (list "rackunit-lib"
