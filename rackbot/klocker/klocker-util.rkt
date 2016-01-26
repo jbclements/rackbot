@@ -23,8 +23,6 @@
          log-session-start!
          record-session-data!)
 
-(define-logger data)
-
 ;; 64 bits should give a very low collision likelihood
 ;; over 100K trials. (about 1 in 55K)
 (define SESSION-KEY-BYTES 8)
@@ -81,10 +79,11 @@
 (define (log-session-start! uid session-key user-timestamp)
   (define local-timestamp (inexact->exact
                            (floor (current-inexact-milliseconds))))
-  (printf "log: ~s\n" `(session-start ,uid
-                                      ,session-key
-                                      ,user-timestamp
-                                    ,local-timestamp)))
+  (log-str! (format "~s"
+                    `(session-start ,uid
+                                    ,session-key
+                                    ,user-timestamp
+                                    ,local-timestamp))))
 
 (: record-session-data! (String String (Listof Natural)
                                 (Listof Natural)
@@ -101,10 +100,30 @@
                                  "lists of same length"
                                  2 uid session-key
                                  (list ts ns ps))]
-          [else (printf (format "log: ~s\n"
-                                       (list 'session-data
-                                             uid session-key
-                                             (car ts)
-                                             (car ns)
-                                             (car ps))))
+          [else (log-str! (format "~s"
+                                  (list 'session-data
+                                        uid session-key
+                                        (car ts)
+                                        (car ns)
+                                        (car ps))))
                 (loop (cdr ts) (cdr ns) (cdr ps))])))
+
+;; low-level logging
+
+
+(define log-port (open-output-file "/etc/service/klocker/klocker-pipe"
+                                   #:exists 'truncate))
+
+(: log-str! (String -> Void))
+(define (log-str! str)
+  (fprintf log-port "~a\n" str))
+
+;; flush every so often (in seconds)
+(define FLUSH-INTERVAL 30)
+
+(thread
+ (λ ()
+   (let loop ()
+     (sleep FLUSH-INTERVAL)
+     (flush-output log-port)
+     (loop))))

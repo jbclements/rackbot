@@ -143,7 +143,8 @@
                                           ['n (? nat? n)]
                                           ['p (? string? p)])
                               ...)))
-     (record-session-data! uid session-key ts ns ps)]
+     (record-session-data! uid session-key t n p)
+     (response/json "recorded")]
     [other (fail-response
             400
             #"wrong JSON shape in POST"
