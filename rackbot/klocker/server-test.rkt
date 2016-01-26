@@ -111,6 +111,29 @@
                          'timestamp 9287))
     (hash-table ('session-key (? long-string? _1))
                            ('training-str (? string? _2)))))
+
+  
+  (test-case
+   "session data"
+   (check-match
+    (postt "record-data" (hash 'userid "clements"
+                               'session-key "7728koh"
+                               'data (list (hash 't 2340
+                                                 'n 2
+                                                 'p "a")
+                                           (hash 't 2640
+                                                 'n 2
+                                                 'p "ab")
+                                           (hash 't 3140
+                                                 'n 2
+                                                 'p "abc")
+                                           (hash 't 3362
+                                                 'n 2
+                                                 'p "ab")
+                                           (hash 't 3961
+                                                 'n 2
+                                                 'p "abq"))))
+    "recorded"))
   
   #;(check-match (postt "start" (hash 'userid "truncheon"
                                     'password "bootie"

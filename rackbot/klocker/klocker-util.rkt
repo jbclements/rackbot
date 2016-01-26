@@ -20,7 +20,8 @@
 
 (provide generate-session-key
          generate-training-str
-         log-session-start!)
+         log-session-start!
+         record-session-data!)
 
 (define-logger data)
 
@@ -80,7 +81,7 @@
 (define (log-session-start! uid session-key user-timestamp)
   (define local-timestamp (inexact->exact
                            (floor (current-inexact-milliseconds))))
-  (printf "log: ~v\n" `(session-start ,uid
+  (printf "log: ~s\n" `(session-start ,uid
                                       ,session-key
                                       ,user-timestamp
                                     ,local-timestamp)))
@@ -100,4 +101,10 @@
                                  "lists of same length"
                                  2 uid session-key
                                  (list ts ns ps))]
-          [else (log-)])))
+          [else (printf (format "log: ~s\n"
+                                       (list 'session-data
+                                             uid session-key
+                                             (car ts)
+                                             (car ns)
+                                             (car ps))))
+                (loop (cdr ts) (cdr ns) (cdr ps))])))
