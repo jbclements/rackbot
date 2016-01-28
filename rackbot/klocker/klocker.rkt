@@ -3,6 +3,7 @@
 ;; ISSUES:
 ;; - disable CORS when deployed
 ;; - stress test anticipated bandwidth... 1.5Meg at once?
+;; - strip =\r\n from end of session keys.
 
 ;; expected endpoints:
 
@@ -11,11 +12,11 @@
 
 ;; POST: /mhk/start, {"userid":...,"password":...,"timestamp":...}
 ;; where the value associated with timestamp is... ?
-;; result: {"session-key":...,"training-str":...}
+;; result: {"sessionkey":...,"trainingstr":...}
 
-;; POST: /mhk/record-data, {"userid":...,"session-key":...,
+;; POST: /mhk/record-data, {"userid":...,"sessionkey":...,
 ;;                          "data":[{t:...,n:...,p:...},...]}
-;; where userid and session-key are strings, and data is a sequence
+;; where userid and sessionkey are strings, and data is a sequence
 ;; of structures containing a t field with milliseconds since the
 ;; beginning of the session, an n field indicating which password
 ;; the trainee is working on, and a p field containing the current
@@ -122,8 +123,8 @@
               (define session-key (generate-session-key))
               (define training-str (generate-training-str uid pwd))
               (log-session-start! uid session-key timestamp)
-              (response/json (hash 'session-key session-key
-                                   'training-str training-str))]
+              (response/json (hash 'sessionkey session-key
+                                   'trainingstr training-str))]
              [else
               (fail-response
                403
@@ -138,7 +139,7 @@
 (define (handle-session-data post-jsexpr)
   (match post-jsexpr
     [(hash-table ('userid (? string? uid))
-                 ('session-key (? string? session-key))
+                 ('sessionkey (? string? session-key))
                  ('data (list (hash-table ['t (? nat? t)]
                                           ['n (? nat? n)]
                                           ['p (? string? p)])

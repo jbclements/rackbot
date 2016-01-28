@@ -109,15 +109,15 @@
     (postt "start" (hash 'userid "clements"
                          'password "aoeuidht"
                          'timestamp 9287))
-    (hash-table ('session-key (? long-string? _1))
-                           ('training-str (? string? _2)))))
+    (hash-table ('sessionkey (? long-string? _1))
+                           ('trainingstr (? string? _2)))))
 
   
   (test-case
    "session data"
    (check-match
     (postt "record-data" (hash 'userid "clements"
-                               'session-key "7728koh"
+                               'sessionkey "7728koh"
                                'data (list (hash 't 2340
                                                  'n 2
                                                  'p "a")
@@ -138,8 +138,8 @@
   #;(check-match (postt "start" (hash 'userid "truncheon"
                                     'password "bootie"
                                     'timestamp 9287))
-               (hash-table ('session-key (? long-string? _1))
-                           ('training-str (? string? _2))))
+               (hash-table ('sessionkey (? long-string? _1))
+                           ('trainingstr (? string? _2))))
    
    ;; latest event
    
