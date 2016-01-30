@@ -17,14 +17,14 @@
           [remote-call/post
            (->* (string? number? string? bytes?)
                 (#:content-type bytes?)
-                jsexpr?)]
+                (or/c bytes? jsexpr?))]
           [remote-call/post/core
            (->* (string? number? string? bytes?)
                 (#:content-type bytes?)
                 (list/c bytes? (listof bytes?) input-port?))]
           [klocker-url
            (-> string? (or/c query? #f) string?)])
-         results->jsexpr)
+         parse-results)
 
 (define-logger klocker)
 
@@ -63,12 +63,12 @@
 ;; given a host, port, and URI, make a GET request and return the
 ;; result as a jsexpr
 (define (remote-call/get host port uri)
-  (apply results->jsexpr (remote-call/get/core host port uri)))
+  (apply parse-results (remote-call/get/core host port uri)))
 
 ;; given a URL, make a POST request and wait for a succesful response, returning a jsexpr
 (define (remote-call/post host port uri post-bytes
                           #:content-type [content-type #"application/json"])
-  (apply results->jsexpr (remote-call/post/core host port uri post-bytes
+  (apply parse-results (remote-call/post/core host port uri post-bytes
                                                 #:content-type content-type)))
 
 
@@ -101,20 +101,28 @@
                 [other (find-field name (cdr headers))])]))
 
 
-;; given a list of results, ensure that the return code is 200 and then parse
-;; the body as a jsexpr
-(define (results->jsexpr first-line headers response-port)
+;; fetch the content on the response-port
+(define (fetch-body response-port)
+  (define reply (car (regexp-match #px".*" response-port)))
+  (close-input-port response-port)
+  (log-klocker-debug (format "reply-bytes : ~v\n" reply))
+  reply)
+
+;; ensure that the return code is 200 and then parse the body either
+;; as html or as a jsexpr
+(define (parse-results first-line headers response-port)
   (define response-code (extract-response-code first-line))
   (cond [(= response-code 200)
          (define mime-type (find-field #"Content-Type" headers))
-         (unless (regexp-match #px#"^application/json(;.*)?$" mime-type)
-           (error 'results->jsexpr
-                  (format "expected mime type application/json, got ~e"
-                          mime-type)))
-         (define reply (car (regexp-match #px".*" response-port)))
-         (close-input-port response-port)
-         (log-klocker-debug (format "reply-bytes : ~v\n" reply))
-         (bytes->jsexpr reply)]
+         (match mime-type
+           [(regexp #px#"^application/json(;.*)?$")
+            (bytes->jsexpr (fetch-body response-port))]
+           [(regexp #px#"^text/html(;.*)?$")
+            (fetch-body response-port)]
+           [other
+            (error 'results->jsexpr
+                  (format "expected mime type application/json or text/html, got ~e"
+                          mime-type))])]
         [else
          (error 'results->jsexpr
                 "response code: expected 200, got: ~v\nwith message: ~v\nand body: ~v" 

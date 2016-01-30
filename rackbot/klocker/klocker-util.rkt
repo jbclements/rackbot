@@ -8,7 +8,9 @@
          racket/match
          file/md5
          (only-in racket/list take)
-         (only-in racket/file get-preference))
+         (only-in racket/file
+                  get-preference
+                  file->bytes))
 
 (require/typed net/base64
                [base64-encode (Bytes -> Bytes)])
@@ -27,7 +29,8 @@
 ;; over 100K trials. (about 1 in 55K)
 (define SESSION-KEY-BYTES 8)
 
-(define TESTING-STR-SALT #"m~4gB\332\367\6")
+(define TESTING-STR-SALT (file->bytes (build-path here "salt.txt")))
+
 
 (define TESTING-STR-BITS 56)
 

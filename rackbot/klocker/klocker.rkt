@@ -26,6 +26,7 @@
 (require racket/match
          web-server/servlet
          web-server/servlet-env
+         web-server/templates
          net/uri-codec
          json
          racket/date
@@ -36,7 +37,6 @@
          racket/runtime-path)
 
 (define-runtime-path here ".")
-
 
 ;; copied from sodec-server:
 (define-logger client)
@@ -109,8 +109,7 @@
               (define session-key (generate-session-key))
               (define training-str (generate-training-str uid pwd))
               (log-session-start! uid session-key timestamp)
-              (response/json (hash 'sessionkey session-key
-                                   'trainingstr training-str))]
+              (main-page uid session-key training-str)]
              [else
               (fail-response
                403
@@ -120,6 +119,12 @@
               400
               #"wrong JSON shape in POST"
               "wrong JSON shape in session-start post")])))
+
+
+;; output a main html page with uid session-key and training-str embedded
+(define (main-page userid session-key training-str)
+  (response/html
+   (include-template "mainpage.html")))
 
 ;; given session data, record it and signal completion
 (define (handle-session-data post-jsexpr)
@@ -173,6 +178,9 @@
    (list (make-header #"Access-Control-Allow-Origin"
                       #"*"))
    (list (jsexpr->bytes jsexpr))))
+
+(define (response/html html)
+  (response/output (λ (port) (write html port))))
 
 (define cert-dir (string->path "/Users/clements/brinckerhoff.org-certs/"))
 (define cert-path (build-path cert-dir "brinckerhoff.org.pem"))

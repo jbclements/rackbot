@@ -1,5 +1,5 @@
 var PwdEntry = (function () {
-  // these must be set by startSession's response
+  // these must be set by go()
   var the_password = false;
   var the_session_key = false;
   var the_timestamp = false;
@@ -63,9 +63,13 @@ var PwdEntry = (function () {
   ];
 
   // start the program running:
-  function go () {
+  function go (uid, sessionkey, trainingstr, timestamp) {
+    the_userid = uid;
+    the_session_key = sessionkey;
+    the_password = trainingstr;
+    the_timestamp = timestamp;
     hideEverything();
-    startSession(goKont);
+    goKont();
   }
 
   // continue after session initialization
@@ -237,16 +241,6 @@ var PwdEntry = (function () {
 
   // PHONE HOME FUNCTIONS
 
-  function startSession (goKont) {
-    the_timestamp = Date.now();
-    $.post('http://localhost:8027/mhk/start',
-           JSON.stringify({userid: the_userid,
-                           password: 'aoeuidht',
-                           timestamp: the_timestamp}),
-           sessionResponseK(goKont)
-          , 'json');
-  }
-
   // record the current state of the password box in the
   // data queue. if the size of the queue is too large,
   // asynchronously send the current data to the server.
@@ -275,23 +269,6 @@ var PwdEntry = (function () {
              states_sent += to_send.length;
              kont();
            });
-  }
-
-  function sessionResponseK (goKont) {
-    return function (data) {
-      var x = JSON.parse('{"a":3}');
-      console.log(JSON.stringify(x));
-      console.log(typeof (data));
-      console.log('the data: ' + JSON.stringify(data));
-      var {trainingstr: pwd, sessionkey: sessionkey} =
-          data;
-      // check for undefined...
-      the_password = pwd;
-      the_session_key = sessionkey;
-      console.log('the str: ' + pwd);
-      console.log('the session key: ' + sessionkey);
-      goKont();
-    };
   }
 
   return {go: go};

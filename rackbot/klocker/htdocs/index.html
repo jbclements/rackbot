@@ -1,47 +1,24 @@
 <html>
   <head>
-<title>HERE IS YOUR PASSWORD</title>
+<title>WUMPA STUMPA</title>
 <link rel="stylesheet" href="./custom.css">
 </head>
 <body>
 <div id="mainpanel">
 
-  <h1>Oogly Boogly!</h1>
+  <h1>Wumpa Stumpa</h1>
 
-  <div id="theForm">
-    <p id="instructions1" class="instructions"></p>
-    <div><input type="text" name="pwdentry1" class="pwdentry bigtext"
-                id="pwdentry1" autocomplete="off"></div>
-    <!-- meter 1 is never used: left in for uniformity: -->
-    <div id="pwd1meter"></div>
-    <p id="instructions2" class="instructions"></p>
-    <div id="pwddisplay" class="bigtext">ZZZ</div>
-    <div><input type="text" name="pwdentry2" class="pwdentry bigtext"
-                id="pwdentry2" autocomplete="off"></div>
-    <div id="pwd2meter"></div>
-    <p id="instructions3" class="instructions"></p>
-    <div><input type="text" name="pwdentry3" class="pwdentry bigtext"
-                id="pwdentry3" autocomplete="off"></div>
-    <div id="pwd3meter"></div>
-    <p id="instructions4" class="instructions"></p>
-    <div><input type="text" name="pwdentry4" class="pwdentry bigtext"
-                id="pwdentry4" autocomplete="off"></div>
-    <div id="pwd4meter"></div>
-    <p id="instructions5" class="instructions"></p>
-    <div><input type="text" name="pwdentry5" class="pwdentry bigtext"
-                id="pwdentry5" autocomplete="off"></div>
-    <div id="pwd5meter"></div>
-    <p id="instructions6" class="instructions"></p>
+  <form action="./start" method="post">
+    <div><input type="text" class="pwdentry bigtext" name="userid"></div>
+    <div><input type="password" class="pwdentry bigtext" name="password"></div>
+    <div></div>
   </form>
-</div>
 
-<script src="./pwdentry.js"></script>
 <script src="./bower_components/jquery/dist/jquery.min.js"></script>
-<script src="./bower_components/underscore/underscore-min.js"></script>
 
-<script>$( document ).ready(function() {
+<!-- <script>$( document ).ready(function() {
   PwdEntry.go();
-});</script>
+});</script> -->
 
 
 </body>
