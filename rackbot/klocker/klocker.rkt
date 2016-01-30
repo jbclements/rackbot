@@ -32,17 +32,10 @@
          xml
          "user-auth.rkt"
          "klocker-util.rkt"
-         racket/file)
+         racket/file
+         racket/runtime-path)
 
-#;(require web-server/formlets
-         web-server/servlet-env
-         web-server/servlet/web
-         web-server/http/xexpr
-         racket/runtime-path
-         racket/date
-         racket/match
-         racket/list
-         "lab-code-hash.rkt")
+(define-runtime-path here ".")
 
 
 ;; copied from sodec-server:
@@ -68,14 +61,9 @@
         client-ip))
      (match method
        [#"GET"
-        (match (url-path uri)
-          [(list (struct path/param ("mhk" (list)))
-                 (struct path/param ("ping" (list))))
-           (response/json "alive")]
-          [other
-           (404-response
-            #"unknown server path"
-            (format "GET url ~v doesn't match known pattern" (url->string uri)))])]
+        (404-response
+         #"unknown server path"
+         (format "GET url ~v doesn't match known pattern" (url->string uri)))]
        [#"POST"
         (with-handlers ([(lambda (exn)
                            (and (exn:fail? exn)
@@ -89,12 +77,10 @@
           (define post-jsexpr (bytes->jsexpr post-data/raw))
           (match (url-path uri)
             ;; start a new session
-            [(list (struct path/param ("mhk" (list)))
-                   (struct path/param ("start" (list))))
+            [(list (struct path/param ("start" (list))))
              (handle-session-start post-jsexpr)]
             ;; add data for a session
-            [(list (struct path/param ("mhk" (list)))
-                   (struct path/param ("record-data" (list))))
+            [(list (struct path/param ("record-data" (list))))
              (handle-session-data post-jsexpr)]
             [other
              (404-response
@@ -200,10 +186,12 @@
     (serve/servlet start
                    #:port 8027
                    #:listen-ip #f
-                   #:servlet-regexp #px"^/mhk/"
+                   #:servlet-regexp #px"^/(start|record-data)$"
                    ;;#:ssl-cert cert-path
                    ;;#:ssl-key key-path
-                   #:launch-browser? #f))  )
+                   #:launch-browser? #f
+                   #:extra-files-paths (list (build-path here "htdocs"))
+                   #:log-file (build-path here "server.log"))))
 
 
 

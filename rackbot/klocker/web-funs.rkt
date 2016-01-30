@@ -53,7 +53,7 @@
 
 ;; formulate a request URL
 (define (klocker-url endpoint query)
-  (string-append "/mhk/" endpoint
+  (string-append "/" endpoint
                  (cond [query
                         (string-append QUERY-START (query->string query))]
                        [else ""])))

@@ -1,0 +1,28 @@
+#mainpanel {
+  width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.bigtext {
+  font-family: consolas, monospace;
+  font-size: 30;
+}
+
+#pwddisplay {
+  color: blue;
+}
+
+.pwdentry {
+  color: green;
+}
+
+#instructions {
+  text-align: left;
+}
+
+.pwdMeterCharBox {
+  margin-top: 10px;
+  border: 1px solid black;
+}

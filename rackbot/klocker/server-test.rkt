@@ -59,8 +59,6 @@
  "klocker server"
  (block
 
-  (test-equal? "ping" (gett "ping" #f) "alive")
-
   ;; bogus endpoint
   (test-case
    "404s"
@@ -68,7 +66,7 @@
    (check-match (remote-call/get/core HOST PORT (klocker-url "blothints" #f))
                 (list (regexp #"^HTTP/1.1 404")
                       _1
-                      (? (port-containing "blothints") _3))))
+                      (? (port-containing "not found") _3))))
 
   
   (test-case
