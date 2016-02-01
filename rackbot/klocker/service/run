@@ -1,0 +1,3 @@
+#!/bin/sh
+
+exec setuidgid clements multilog t s10000000 n20 /var/log/klocker-log < /opt/local/var/svscan/service/klocker-log/klocker-pipe

@@ -5,8 +5,9 @@
          molis-hai/char-model
          molis-hai/example-model
          racket/runtime-path
-         racket/match
-         file/md5
+         rackjure/threading
+         ;racket/match
+         ;file/md5
          (only-in racket/list take)
          (only-in racket/file
                   get-preference
@@ -38,8 +39,19 @@
 
 (: generate-session-key (-> String))
 (define (generate-session-key)
-  (bytes->string/utf-8
-   (base64-encode (random-bytes SESSION-KEY-BYTES))))
+  (~> (random-bytes SESSION-KEY-BYTES)
+      base64-encode
+      strip-trailing-equals
+      bytes->string/utf-8))
+
+;; strip the trailing =\r\n off of the base64-encoding
+(: strip-trailing-equals (Bytes -> Bytes))
+(define (strip-trailing-equals encoded)
+  (cond [(equal? (subbytes encoded (- (bytes-length encoded) 3)) #"=\r\n")
+         (subbytes encoded 0 (- (bytes-length encoded) 3))]
+        [else (raise-argument-error 'strip-trailing-equals
+                                    "byte-string ending with =\\r\\n"
+                                    0 encoded)]))
 
 ;; PASSWORD GENERATION
 
@@ -78,15 +90,14 @@
 
 ;; LOGGING
 
-(: log-session-start! (String String Integer -> Void))
-(define (log-session-start! uid session-key user-timestamp)
+;; log a session beginning.
+(: log-session-start! (String String -> Void))
+(define (log-session-start! uid session-key)
   (define local-timestamp (inexact->exact
                            (floor (current-inexact-milliseconds))))
   (log-str! (format "~s"
                     `(session-start ,uid
-                                    ,session-key
-                                    ,user-timestamp
-                                    ,local-timestamp))))
+                                    ,session-key))))
 
 (: record-session-data! (String String (Listof Natural)
                                 (Listof Natural)
@@ -114,7 +125,8 @@
 ;; low-level logging
 
 
-(define log-port (open-output-file "/etc/service/klocker/klocker-pipe"
+(define log-port (open-output-file "/opt/local/var/svscan/service/klocker-log/klocker-pipe"
+                                   #;"/etc/service/klocker-log/klocker-pipe"
                                    #:exists 'truncate))
 
 (: log-str! (String -> Void))

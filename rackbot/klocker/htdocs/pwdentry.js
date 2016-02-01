@@ -5,6 +5,8 @@ var PwdEntry = (function () {
   var the_timestamp = false;
   var the_userid = 'clements';
 
+  var RECORD_DATA_URL = 'http://localhost:8027/record-data';
+
   var t1 = 'Do you remember your password from last time? Type as much' +
         ' of it as you remember here, then press return:';
 
@@ -263,7 +265,7 @@ var PwdEntry = (function () {
     var packet = {userid: the_userid,
                   sessionkey: the_session_key,
                   data: to_send};
-    $.post('http://localhost:8027/mhk/record-data',
+    $.post(RECORD_DATA_URL,
            JSON.stringify(packet),
            function (data) {
              states_sent += to_send.length;

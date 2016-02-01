@@ -4,13 +4,15 @@
 ;; - disable CORS when deployed
 ;; - stress test anticipated bandwidth... 1.5Meg at once?
 ;; - strip =\r\n from end of session keys.
+;; - password length... long enough boxes?
+;; - align printed password and box
 
 ;; expected endpoints:
 
 ;; GET: /mhk/ping
 ;; result: "alive"
 
-;; POST: /mhk/start, {"userid":...,"password":...,"timestamp":...}
+;; POST: /mhk/start,  "userid=...&password=..."
 ;; where the value associated with timestamp is... ?
 ;; result: {"sessionkey":...,"trainingstr":...}
 
@@ -74,14 +76,14 @@
                             #"bad JSON in POST"
                             (format "expected POST bytes parseable as JSON, got: ~e"
                                     post-data/raw)))])
-          (define post-jsexpr (bytes->jsexpr post-data/raw))
           (match (url-path uri)
             ;; start a new session
             [(list (struct path/param ("start" (list))))
-             (handle-session-start post-jsexpr)]
+             (handle-session-start (form-urlencoded->alist (bytes->string/utf-8
+                                                            post-data/raw)))]
             ;; add data for a session
             [(list (struct path/param ("record-data" (list))))
-             (handle-session-data post-jsexpr)]
+             (handle-session-data (bytes->jsexpr post-data/raw))]
             [other
              (404-response
               #"unknown server path"
@@ -91,7 +93,7 @@
          (format "unexpected method"))])])))
 
 ;; handle a session-start
-(define (handle-session-start post-jsexpr)
+(define (handle-session-start post-alist)
   (with-handlers ([(lambda (exn)
                      (and (exn:fail? exn)
                           (regexp-match #px"no user named"
@@ -101,15 +103,15 @@
                       403
                       #"Forbidden"
                       (exn-message exn)))])
-    (match post-jsexpr
-      [(hash-table ('timestamp (? number? timestamp))
-                   ('userid (? string? uid))
-                   ('password (? string? pwd)))
-       (cond [(valid-password? uid pwd)
+    (match post-alist
+      [(list-no-order
+        (cons 'userid (? string? userid))
+        (cons 'password (? string? pwd)))
+       (cond [(valid-password? userid pwd)
               (define session-key (generate-session-key))
-              (define training-str (generate-training-str uid pwd))
-              (log-session-start! uid session-key timestamp)
-              (main-page uid session-key training-str)]
+              (define training-str (generate-training-str userid pwd))
+              (log-session-start! userid session-key)
+              (main-page userid session-key training-str)]
              [else
               (fail-response
                403
@@ -117,8 +119,8 @@
                "user id and password incorrect")])]
       [other (fail-response
               400
-              #"wrong JSON shape in POST"
-              "wrong JSON shape in session-start post")])))
+              #"wrong POST data shape"
+              "wrong fields in session-start POST data")])))
 
 
 ;; output a main html page with uid session-key and training-str embedded
@@ -180,7 +182,9 @@
    (list (jsexpr->bytes jsexpr))))
 
 (define (response/html html)
-  (response/output (λ (port) (write html port))))
+  (response/output (λ (port)
+                     (write-string html port)
+                     (void))))
 
 (define cert-dir (string->path "/Users/clements/brinckerhoff.org-certs/"))
 (define cert-path (build-path cert-dir "brinckerhoff.org.pem"))

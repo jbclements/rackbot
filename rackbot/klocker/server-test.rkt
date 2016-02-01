@@ -82,23 +82,18 @@
 
 
   (test-case
-   "missing json field"
+   "missing field"
    (check-match
     (remote-call/post/core HOST PORT (klocker-url "start" #f)
-                           (jsexpr->bytes
-                            (hash 'userid "truncheon"
-                                  'password "bootie")))
-    (list (regexp #px"^HTTP/1.1 400 wrong JSON shape in POST")
+                           #"userid=this+is+my+name")
+    (list (regexp #px"^HTTP/1.1 400 wrong POST data shape")
           _2 _3)))
   
   (test-case
    "unknown user"
    (check-match
     (remote-call/post/core HOST PORT (klocker-url "start" #f)
-                           (jsexpr->bytes
-                            (hash 'userid "truncheon"
-                                  'password "bootie"
-                                  'timestamp 9287)))
+                           #"userid=this+is+my+name&password=and+my+password")
     (list (regexp #px"^HTTP/1.1 403 Forbidden") _2 _3)))
 
   (test-case
@@ -106,9 +101,8 @@
    (check-pred
     (λ (response)
       (regexp-match #px"HERE IS YOUR PASSWORD" response))
-    (postt "start" (hash 'userid "clements"
-                         'password "aoeuidht"
-                         'timestamp 9287))))
+    (remote-call/post HOST PORT (klocker-url "start" #f)
+                      #"userid=guest&password=40")))
 
   
   (test-case
