@@ -3,20 +3,20 @@
 ;; ISSUES:
 ;; - disable CORS when deployed
 ;; - stress test anticipated bandwidth... 1.5Meg at once?
-;; - strip =\r\n from end of session keys.
 ;; - password length... long enough boxes?
 ;; - align printed password and box
+;; - 'this popup is too annoying' message
+;; - consent form
+;; - user repeat lockout
+;; - hash user names in log? 
 
 ;; expected endpoints:
 
-;; GET: /mhk/ping
-;; result: "alive"
-
-;; POST: /mhk/start,  "userid=...&password=..."
+;; POST: /start,  "userid=...&password=..."
 ;; where the value associated with timestamp is... ?
 ;; result: {"sessionkey":...,"trainingstr":...}
 
-;; POST: /mhk/record-data, {"userid":...,"sessionkey":...,
+;; POST: /record-data, {"userid":...,"sessionkey":...,
 ;;                          "data":[{t:...,n:...,p:...},...]}
 ;; where userid and sessionkey are strings, and data is a sequence
 ;; of structures containing a t field with milliseconds since the
@@ -130,19 +130,30 @@
 
 ;; given session data, record it and signal completion
 (define (handle-session-data post-jsexpr)
-  (match post-jsexpr
+  (match-record-data-jsexpr
+   post-jsexpr
+   (λ (uid session-key t n p)
+     (record-session-data! uid session-key t n p)
+     (response/json "recorded"))
+   (λ ()
+     (fail-response
+            400
+            #"wrong JSON shape in POST"
+            "wrong JSON shape in session-data post"))))
+
+;; given jsexpr, match it and call either success or fail continuation
+;; this abstraction is a bit awkward, but I want to be able to test
+;; it independently
+(define (match-record-data-jsexpr jsexpr success-kont fail-kont)
+  (match jsexpr
     [(hash-table ('userid (? string? uid))
                  ('sessionkey (? string? session-key))
                  ('data (list (hash-table ['t (? nat? t)]
                                           ['n (? nat? n)]
                                           ['p (? string? p)])
                               ...)))
-     (record-session-data! uid session-key t n p)
-     (response/json "recorded")]
-    [other (fail-response
-            400
-            #"wrong JSON shape in POST"
-            "wrong JSON shape in session-data post")]))
+     (success-kont uid session-key t n p)]
+    [other (fail-kont)]))
 
 (define nat? exact-nonnegative-integer?)
 
@@ -204,6 +215,22 @@
                    #:launch-browser? #f
                    #:extra-files-paths (list (build-path here "htdocs"))
                    #:log-file (build-path here "server.log"))))
+
+(module+ test
+  (require rackunit)
+  (define test-jsexpr
+    (bytes->jsexpr
+     #"{\"userid\":\"guest\",\"sessionkey\":\"A6MCslStdKk\",\"data\":
+[{\"t\":123,\"n\":1,\"p\":\"D\"},{\"t\":456,\"n\":1,\"p\":\"De\"}]}" 
+     ))
+  (check-equal?
+   (match-record-data-jsexpr
+    test-jsexpr
+    (λ (uid session-key t n p)
+      (list uid session-key t n p))
+    (λ ()
+      'fail))
+   (list "guest" "A6MCslStdKk" '(123 456) '(1 1) '("D" "De"))))
 
 
 

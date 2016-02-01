@@ -69,7 +69,7 @@ var PwdEntry = (function () {
     the_userid = uid;
     the_session_key = sessionkey;
     the_password = trainingstr;
-    the_timestamp = timestamp;
+    the_timestamp = Date.now();
     hideEverything();
     goKont();
   }
@@ -251,7 +251,7 @@ var PwdEntry = (function () {
     statequeue.push({t: timediff, n: step, p: usertext});
     states_queued += 1;
     if (statequeue.length >= STATE_QUEUE_SIZE) {
-      flushUserTextQueue(function (data) { return 0; });
+      flushUserTextQueue(function () { return 0; });
     }
   }
 
@@ -267,7 +267,7 @@ var PwdEntry = (function () {
                   data: to_send};
     $.post(RECORD_DATA_URL,
            JSON.stringify(packet),
-           function (data) {
+           function () {
              states_sent += to_send.length;
              kont();
            });

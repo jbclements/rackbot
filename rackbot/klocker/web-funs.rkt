@@ -183,9 +183,9 @@
   
   (check-equal? (klocker-url "latest-event"
                            `((device s-temp-bed)))
-                "/mhk/latest-event?device=s-temp-bed")
+                "/latest-event?device=s-temp-bed")
   (check-equal? (klocker-url "latest-event" #f)
-                (string-append "/mhk/latest-event"))
+                (string-append "/latest-event"))
 
   
   (check-match (remote-call/get/core "example.com" 80 "/")
