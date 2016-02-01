@@ -18,8 +18,9 @@
   color: green;
 }
 
-#instructions {
+.instructions {
   text-align: left;
+  font-size: 20;
 }
 
 .pwdMeterCharBox {

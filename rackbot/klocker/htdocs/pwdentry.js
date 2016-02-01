@@ -8,7 +8,8 @@ var PwdEntry = (function () {
   var RECORD_DATA_URL = 'http://localhost:8027/record-data';
 
   var t1 = 'Do you remember your password from last time? Type as much' +
-        ' of it as you remember here, then press return:';
+      ' of it as you remember here, then press return. (If this is your' +
+      ' first time, just hit return.)';
 
   var t2bad = 'Here\'s the correct password. Type it in the box, and then' +
       ' press return:';
