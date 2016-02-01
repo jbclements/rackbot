@@ -8,7 +8,9 @@
 ;; - 'this popup is too annoying' message
 ;; - consent form
 ;; - user repeat lockout
-;; - hash user names in log? 
+;; - hash user names in log?
+;; - configuration management! https/http, localhost/king, log file locations
+;; - spaces at end of passwords!
 
 ;; expected endpoints:
 
