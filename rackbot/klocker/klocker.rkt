@@ -1,7 +1,6 @@
 #lang racket/base
 
 ;; ISSUES:
-;; - disable CORS when deployed
 ;; - stress test anticipated bandwidth... 1.5Meg at once?
 ;; - password length... long enough boxes?
 ;; - align printed password and box
@@ -16,10 +15,10 @@
 
 ;; POST: /start,  "userid=...&password=..."
 ;; where the value associated with timestamp is... ?
-;; result: {"sessionkey":...,"trainingstr":...}
+;; result: a web page
 
 ;; POST: /record-data, {"userid":...,"sessionkey":...,
-;;                          "data":[{t:...,n:...,p:...},...]}
+;;                      "data":[{t:...,n:...,p:...},...]}
 ;; where userid and sessionkey are strings, and data is a sequence
 ;; of structures containing a t field with milliseconds since the
 ;; beginning of the session, an n field indicating which password
@@ -35,10 +34,10 @@
          json
          racket/date
          xml
+         racket/runtime-path
          "user-auth.rkt"
          "klocker-util.rkt"
-         racket/file
-         racket/runtime-path)
+         "local-config.rkt")
 
 (define-runtime-path here ".")
 
@@ -113,7 +112,8 @@
               (define session-key (generate-session-key))
               (define training-str (generate-training-str userid pwd))
               (log-session-start! userid session-key)
-              (main-page userid session-key training-str)]
+              (main-page userid session-key training-str
+                         record-data-url)]
              [else
               (fail-response
                403
@@ -126,7 +126,7 @@
 
 
 ;; output a main html page with uid session-key and training-str embedded
-(define (main-page userid session-key training-str)
+(define (main-page userid session-key training-str record-data-url)
   (response/html
    (include-template "mainpage.html")))
 
@@ -174,8 +174,7 @@
    code
    header-msg
    (current-seconds) TEXT/HTML-MIME-TYPE
-   ;; need CORS headers even on fails to allow them to be read...
-   (list (make-header #"Access-Control-Allow-Origin"
+   (list #;(make-header #"Access-Control-Allow-Origin"
                       #"*"))
    (list
     (string->bytes/utf-8
@@ -190,7 +189,7 @@
    (current-seconds)
    #"application/json"
    ;; CORS header necessary for testing only:
-   (list (make-header #"Access-Control-Allow-Origin"
+   (list #;(make-header #"Access-Control-Allow-Origin"
                       #"*"))
    (list (jsexpr->bytes jsexpr))))
 
@@ -199,21 +198,15 @@
                      (write-string html port)
                      (void))))
 
-(define cert-dir (string->path "/Users/clements/brinckerhoff.org-certs/"))
-(define cert-path (build-path cert-dir "brinckerhoff.org.pem"))
-(define key-path (build-path cert-dir "brinckerhoff.org.key"))
-
 (module+ main
   (with-handlers ([(λ (exn) #t)
                    (λ (exn)
                      (log-error (exn-message exn))
                      (raise exn))])
     (serve/servlet start
-                   #:port 8027
+                   #:port listen-port
                    #:listen-ip #f
                    #:servlet-regexp #px"^/(start|record-data)$"
-                   ;;#:ssl-cert cert-path
-                   ;;#:ssl-key key-path
                    #:launch-browser? #f
                    #:extra-files-paths (list (build-path here "htdocs"))
                    #:log-file (build-path here "server.log"))))

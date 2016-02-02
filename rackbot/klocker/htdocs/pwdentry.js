@@ -3,9 +3,8 @@ var PwdEntry = (function () {
   var the_password = false;
   var the_session_key = false;
   var the_timestamp = false;
-  var the_userid = 'clements';
-
-  var RECORD_DATA_URL = 'http://localhost:8027/record-data';
+  var the_userid = false;
+  var the_record_data_url = false;
 
   var t1 = 'Do you remember your password from last time? Type as much' +
       ' of it as you remember here, then press return. (If this is your' +
@@ -25,7 +24,7 @@ var PwdEntry = (function () {
   var t5 = 'Okay, last time, see if you can remember it. Type as much as you' +
         ' remember, then hit return:';
 
-  var t6bad = 'Good try. Many thanks for your help. You can close this page now.';
+  var t6bad = 'Good try. Many thanks for your help! You can close this page now.';
 
   var t6good = 'Awesome! Many thanks for your help. You can close this page now.';
 
@@ -66,10 +65,11 @@ var PwdEntry = (function () {
   ];
 
   // start the program running:
-  function go (uid, sessionkey, trainingstr, timestamp) {
+  function go (uid, sessionkey, trainingstr, recorddataurl) {
     the_userid = uid;
     the_session_key = sessionkey;
     the_password = trainingstr;
+    the_record_data_url = recorddataurl;
     the_timestamp = Date.now();
     hideEverything();
     goKont();

@@ -11,7 +11,8 @@
          (only-in racket/list take)
          (only-in racket/file
                   get-preference
-                  file->bytes))
+                  file->bytes)
+         "local-config.rkt")
 
 (require/typed net/base64
                [base64-encode (Bytes -> Bytes)])
@@ -62,7 +63,7 @@
   (define bits (generate-password-bits uid pwd))
   (cond [(experimental-group? uid)
          ;; atotc-model strings always start with a space:
-         (substring (generate-char-pwd atotc-model bits) 1)]
+         (molis-hai-cleanup (generate-char-pwd atotc-model bits))]
         [else
          (generate-char-pwd base-model bits)]))
 
@@ -75,6 +76,15 @@
                                  (string->bytes/utf-8 pwd)
                                  TESTING-STR-SALT))))
          TESTING-STR-BITS))
+
+;; remove the leading space, add an 'a' to the end if it ends
+;; with a space.
+(: molis-hai-cleanup (String -> String))
+(define (molis-hai-cleanup str)
+  (define str2 (substring str 1))
+  (cond [(string=? (substring str2 (- (string-length str2) 1)) " ")
+         (string-append str2 "a")]
+        [else str2]))
 
 ;; divide the class into experimental and control groups
 ;; based on a hash of their name (and some tweaking to get a good
@@ -125,13 +135,16 @@
 ;; low-level logging
 
 
-(define log-port (open-output-file "/opt/local/var/svscan/service/klocker-log/klocker-pipe"
-                                   #;"/etc/service/klocker-log/klocker-pipe"
-                                   #:exists 'truncate))
+(define log-port (open-output-file fifo-path #:exists 'truncate))
 
 (: log-str! (String -> Void))
 (define (log-str! str)
   (fprintf log-port "~a\n" str))
+
+(module+ test
+  (require typed/rackunit)
+  (check-equal? (molis-hai-cleanup " abcd") "abcd")
+  (check-equal? (molis-hai-cleanup " abcd ") "abcd a"))
 
 ;; flush every so often (in seconds)
 (define FLUSH-INTERVAL 30)
