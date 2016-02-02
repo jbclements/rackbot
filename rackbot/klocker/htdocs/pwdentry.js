@@ -266,7 +266,7 @@ var PwdEntry = (function () {
     var packet = {userid: the_userid,
                   sessionkey: the_session_key,
                   data: to_send};
-    $.post(RECORD_DATA_URL,
+    $.post(the_record_data_url,
            JSON.stringify(packet),
            function () {
              states_sent += to_send.length;
