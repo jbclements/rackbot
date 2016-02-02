@@ -5,7 +5,7 @@
          molis-hai/char-model
          molis-hai/example-model
          racket/runtime-path
-         rackjure/threading
+         threading
          ;racket/match
          ;file/md5
          (only-in racket/list take)

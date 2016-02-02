@@ -6,10 +6,13 @@
 ;; - align printed password and box
 ;; - 'this popup is too annoying' message
 ;; - consent form
+;; - can't hit return where the interface tells you to (for new users)
+;; - allow users to create their own accounts
 ;; - user repeat lockout
 ;; - hash user names in log?
-;; - configuration management! https/http, localhost/king, log file locations
+;; - remove run from repo (for local config)
 ;; - spaces at end of passwords!
+;; - make /etc/service for server itself.
 
 ;; expected endpoints:
 
