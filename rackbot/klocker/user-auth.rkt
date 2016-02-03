@@ -2,7 +2,8 @@
 
 (require racket/runtime-path
          racket/match
-         racket/file)
+         racket/file
+         threading)
 
 (require/typed file/md5
                [md5 (Bytes -> Bytes)])
@@ -26,12 +27,12 @@
     [#f #f]
     [other #t]))
 
-(: get-user-pwd-hash (String -> String))
+(: get-user-pwd-hash (String -> (U False String)))
 (define (get-user-pwd-hash username)
   (match (get-preference (string->symbol username) (lambda () #f) 'timestamp
                          PASSWORD-FILE)
     [(list-rest (? string? s) _1) s]
-    [#f (error 'get-user-pwd-hash (format "no user named ~v" username))]
+    [#f #f]
     [other (error 'get-user-pwd-hash
                   "internal error 2016-01-23")]))
 
@@ -39,9 +40,13 @@
 ;; users.rktd
 (: valid-password? (String String -> Boolean))
 (define (valid-password? uid pwd)
-  (equal?
-   (bytes->string/latin-1 (md5 (string->bytes/utf-8 pwd)))
-   (get-user-pwd-hash uid)))
+  (match (get-user-pwd-hash uid)
+    [#f #f]
+    [hashstr (~> pwd
+                 string->bytes/utf-8
+                 md5
+                 bytes->string/latin-1
+                 (equal? hashstr))]))
 
 ;; CONSENT
 

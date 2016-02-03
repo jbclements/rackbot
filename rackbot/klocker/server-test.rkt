@@ -122,7 +122,7 @@
    (check-pred
     (λ (response)
       (regexp-match #px"HERE IS YOUR PASSWORD" response))
-    (postt "/record-consent" #"userdi=guest&sessionid=bogus!&trainingstr=bogustoo!")))
+    (postt "/record-consent" #"sessionkey=testsessionkey")))
   
   (test-case
    "successful login"

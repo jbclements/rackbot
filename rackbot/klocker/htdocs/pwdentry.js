@@ -7,7 +7,7 @@ var PwdEntry = (function () {
 
   var t1 = 'Do you remember your password from last time? Type as much' +
       ' of it as you remember here, then press return. (If this is your' +
-      ' first time, just hit return.)';
+      ' first time, just type "x" and hit return.)';
 
   var t2bad = 'Here\'s the correct password. Type it in the box, and then' +
       ' press return:';
@@ -64,7 +64,7 @@ var PwdEntry = (function () {
   ];
 
   // start the program running:
-  function go (uid, sessionkey, trainingstr, recorddataurl) {
+  function go (sessionkey, trainingstr, recorddataurl) {
     the_session_key = sessionkey;
     the_password = trainingstr;
     the_record_data_url = recorddataurl;

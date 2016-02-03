@@ -12,14 +12,30 @@
 ;; ensuring that there aren't multiple sessions active for a single
 ;; user.
 
+;; note that restarting the server will reset all tables.
+
 (provide maybe-start-user-session
          session-active?
          session-info
          generate-session-key
-         valid-session-key?
-         )
+         valid-session-key?)
 
-;; note that restarting the server will reset all tables.
+
+;; 43 hours:
+(define ENFORCED-TIME-GAP (* 3600 43))
+
+;; 64 bits should give a very low collision likelihood
+;; over 100K trials. (about 1 in 55K)
+(define SESSION-KEY-BYTES 8)
+
+;; these are base64-encoded, so they get longer:
+(define MAX-SESSION-KEY-LENGTH 16)
+
+;;;;;;;
+;;
+;;  Types
+;;
+;;;;;;;
 
 (define-type Userid String)
 (define-type SessionKey String)
@@ -33,12 +49,6 @@
 ;; maps a session id to a user and a training string:
 (define-type SessionKeyMap (HashTable SessionKey (List Userid TrainingStr)))
 
-;; 64 bits should give a very low collision likelihood
-;; over 100K trials. (about 1 in 55K)
-(define SESSION-KEY-BYTES 8)
-
-;; these are base64-encoded, so they get longer:
-(define MAX-SESSION-KEY-LENGTH 16)
 
 ;;;;;;;
 ;;
@@ -79,11 +89,20 @@
 
 ;; mutable!
 (: the-user-map UserMap)
-(define the-user-map (make-hash))
+(define the-user-map (make-hash
+                      (ann
+                       (list (cons "testuser"
+                                   (list "testsessionkey" 123)))
+                       (Listof (Pairof Userid (List SessionKey Timestamp))))))
 
 ;; mutable!
 (: the-session-key-map SessionKeyMap)
-(define the-session-key-map (make-hash))
+(define the-session-key-map (make-hash
+                             (ann
+                              (list (cons "testsessionkey"
+                                          (list "testuser" "boguspassword")))
+                              (Listof (Pairof SessionKey
+                                              (List Userid TrainingStr))))))
 
 
 ;; user interaction state diagram.
@@ -121,9 +140,6 @@
 (define (old-time? t)
   (< (+ t ENFORCED-TIME-GAP) (current-seconds)))
 
-;; 19 hours:
-(define ENFORCED-TIME-GAP (* 3600 18))
-
 ;; is this the most recent session associated with the user?
 (: session-active? (String -> Boolean))
 (define (session-active? session-key)
@@ -148,7 +164,7 @@
   (check-true (hash-has-key? the-session-key-map "3hnth3"))
   (check-false (hash-has-key? the-user-map "bapbap"))
   (check-false (hash-has-key? the-session-key-map "227"))
-  (check-equal? (session-info "3hnth3") (list "zardoz" ))
+  (check-equal? (session-info "3hnth3") (list "zardoz" "a"))
   (check-equal? (maybe-start-user-session "zardoz" "287" "a") #f)
   (check-equal? (maybe-start-user-session "zardoz" "227" "a") #f)
   (check-equal? (maybe-start-user-session "bapbap" "227" "a") #t)
@@ -160,6 +176,11 @@
 
   (check-true (session-active? "3hnth3"))
   (check-false (session-active? "aaaaa"))
+
+  (check-equal? (session-info "3hnth3")
+                (list "zardoz" "a"))
+  (check-equal? (session-info "testsessionkey")
+                (list "testuser" "boguspassword"))
 
   ;; only run these tests after setting the time gap to 5 seconds...
   ;(check-false (maybe-start-user-session "zardoz" "21437"))

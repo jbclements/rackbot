@@ -22,13 +22,12 @@
 ;; POST: /start,  "userid=...&password=..."
 ;; result: a web page
 
-;; POST: /record-consent, "userid=...&sessionkey=...&trainingstr=..."
-;; NB: trainingstr is form-urlencoded
+;; POST: /record-consent, "sessionkey=..."
 ;; result: a web page
 
-;; POST: /record-data, {"userid":...,"sessionkey":...,
+;; POST: /record-data, {"sessionkey":...,
 ;;                      "data":[{t:...,n:...,p:...},...]}
-;; where userid and sessionkey are strings, and data is a sequence
+;; where sessionkey is a string, and data is a sequence
 ;; of structures containing a t field with milliseconds since the
 ;; beginning of the session, an n field indicating which password
 ;; the trainee is working on, and a p field containing the current
@@ -51,8 +50,12 @@
 
 (define START-ENDPOINT "start")
 (define DATALOG-ENDPOINT "record-data")
-(define CONSENTED-ENDPOINT "record-consented")
-(define SERVLET-REGEXP  #px"^/(start|record-data|record-consented)$")
+(define CONSENTED-ENDPOINT "record-consent")
+(define SERVLET-REGEXP  #px"^/(start|record-data|record-consent)$")
+
+(define datalog-url (string-append server-stem "/" DATALOG-ENDPOINT))
+(define start-url (string-append server-stem "/" START-ENDPOINT))
+(define consented-url (string-append server-stem "/" CONSENTED-ENDPOINT))
 
 (define-runtime-path here ".")
 
@@ -62,7 +65,7 @@
 ;; handle a request. "front door" of the server
 (define (start req)
   (with-handlers ;; log all errors...
-      (#;[(lambda (exn) #t)
+      ([(lambda (exn) #t)
         (lambda (exn)
           
           (log-error (exn-message exn))
@@ -114,7 +117,8 @@
             [other
              (404-response
               #"unknown server path"
-              (format "POST url ~v doesn't match known pattern" (url->string uri)))]))]
+              (format "POST url ~v doesn't match known pattern"
+                      (url->string uri)))]))]
        [other
         (404-response
          (format "unexpected method"))])])))
@@ -123,23 +127,23 @@
 (define (handle-consented post-alist)
   (match post-alist
     [(list
-      (cons 'session-key (? string? session-key)))
+      (cons 'sessionkey (? string? session-key)))
      (cond [(not (valid-session-key? session-key))
             (fail-response
              400
              #"Illegal Session Key"
              "session keys must be valid")]
            [else (match (session-info session-key)
-                   [(list )])]
-           [(session-active? session-key)
-            (main-page userid session-key
-                              (escape-quotes training-str)                              
-                              (string-append server-stem "/" DATALOG-ENDPOINT))]
-           [else
-            (fail-response
-             403
-             #"Forbidden"
-             (format "this session key does not appear to be active: ~v" session-key))])]
+                   [(list user training-str)
+                    (main-page session-key
+                               (escape-quotes training-str)
+                               datalog-url)]
+                   [#f
+                    (fail-response
+                     403
+                     #"Forbidden"
+                     (format "this session key does not appear to be active: ~v"
+                             session-key))])])]
     [other (fail-response
             400
             #"wrong POST data shape"
@@ -164,17 +168,16 @@
              "user ids can contain only numbers, characters, and underscore")]
            [(valid-password? userid password)
             (define session-key (generate-session-key))
-            (match (maybe-start-user-session userid session-key)
+            (define training-str (generate-training-str userid password))
+            (match (maybe-start-user-session userid session-key training-str)
               [#t
-               (define training-str (generate-training-str userid password))
                (log-session-start! userid session-key training-str)
                (cond [(user-consented? userid)
-                      (main-page userid session-key training-str
-                                 (string-append server-stem "/" DATALOG-ENDPOINT))]
+                      (main-page session-key training-str datalog-url)]
                      [else
                       (consent-page userid session-key
                                     (form-urlencoded-encode training-str)
-                                    (string-append server-stem "/" CONSENTED-ENDPOINT))])]
+                                    consented-url)])]
               [#f
                (fail-response
                 403
@@ -184,14 +187,14 @@
             (fail-response
              403
              #"Forbidden"
-             "user id and password incorrect")])]
+             "user id and/or password incorrect")])]
     [other (fail-response
             400
             #"wrong POST data shape"
             "wrong fields in session-start POST data")]))
 
 ;; output a main html page with userid session-key and training-str embedded
-(define (main-page userid session-key training-str record-data-url)
+(define (main-page session-key training-str record-data-url)
   (response/html
    (include-template "mainpage-template.html")))
 
@@ -222,7 +225,7 @@
                                           ['n (? nat? n)]
                                           ['p (? string? p)])
                               ...)))
-     (success-kont userid session-key t n p)]
+     (success-kont session-key t n p)]
     [other (fail-kont)]))
 
 (define nat? exact-nonnegative-integer?)
@@ -283,17 +286,17 @@
   (check-equal? (escape-quotes "ab'\"cd") "ab'\\\"cd")
   (define test-jsexpr
     (bytes->jsexpr
-     #"{\"userid\":\"guest\",\"sessionkey\":\"A6MCslStdKk\",\"data\":
+     #"{\"sessionkey\":\"A6MCslStdKk\",\"data\":
 [{\"t\":123,\"n\":1,\"p\":\"D\"},{\"t\":456,\"n\":1,\"p\":\"De\"}]}" 
      ))
   (check-equal?
    (match-record-data-jsexpr
     test-jsexpr
-    (λ (userid session-key t n p)
-      (list userid session-key t n p))
+    (λ (session-key t n p)
+      (list session-key t n p))
     (λ ()
       'fail))
-   (list "guest" "A6MCslStdKk" '(123 456) '(1 1) '("D" "De"))))
+   (list "A6MCslStdKk" '(123 456) '(1 1) '("D" "De"))))
 
 
 
