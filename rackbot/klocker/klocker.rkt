@@ -13,11 +13,16 @@
 ;; - remove run from repo (for local config)
 ;; - spaces at end of passwords!
 ;; - make /etc/service for server itself.
+;; - session-start must include training string
+;; - use 'label' attribute
 
 ;; expected endpoints:
 
 ;; POST: /start,  "userid=...&password=..."
-;; where the value associated with timestamp is... ?
+;; result: a web page
+
+;; POST: /record-consent, "userid=...&sessionkey=...&trainingstr=..."
+;; NB: trainingstr is form-urlencoded
 ;; result: a web page
 
 ;; POST: /record-data, {"userid":...,"sessionkey":...,
@@ -41,6 +46,11 @@
          "user-auth.rkt"
          "klocker-util.rkt"
          "local-config.rkt")
+
+(define START-ENDPOINT "start")
+(define DATALOG-ENDPOINT "record-data")
+(define CONSENTED-ENDPOINT "record-consented")
+(define SERVLET-REGEXP  #px"^/(start|record-data|record-consented)$")
 
 (define-runtime-path here ".")
 
@@ -81,13 +91,23 @@
                             (format "expected POST bytes parseable as JSON, got: ~e"
                                     post-data/raw)))])
           (match (url-path uri)
-            ;; start a new session
-            [(list (struct path/param ("start" (list))))
-             (handle-session-start (form-urlencoded->alist (bytes->string/utf-8
-                                                            post-data/raw)))]
-            ;; add data for a session
-            [(list (struct path/param ("record-data" (list))))
-             (handle-session-data (bytes->jsexpr post-data/raw))]
+            [(list (struct path/param (endpoint (list))))
+             (cond
+               ;; start a new session
+               [(string=? endpoint START-ENDPOINT)
+                (handle-session-start (form-urlencoded->alist (bytes->string/utf-8
+                                                               post-data/raw)))]
+               ;; user has consented
+               [(string=? endpoint CONSENTED-ENDPOINT)
+                (handle-consented (form-urlencoded->alist (bytes->string/utf-8
+                                                           post-data/raw)))]
+               ;; add data for a session
+               [(string=? endpoint DATALOG-ENDPOINT)
+                (handle-session-data (bytes->jsexpr post-data/raw))]
+               [else
+                (404-response
+                 #"unknown server path"
+                 (format "POST url ~v doesn't match known pattern" (url->string uri)))])]
             [other
              (404-response
               #"unknown server path"
@@ -96,49 +116,94 @@
         (404-response
          (format "unexpected method"))])])))
 
+;; handle a click on "I agree"
+(define (handle-consented post-alist)
+  (match post-alist
+    [(list-no-order
+      (cons 'userid (? string? userid))
+      (cons 'session-key (? string? session-key))
+      (cons 'training-str (? string? training-str)))
+     (cond [(not (valid-userid? userid))
+            (fail-response
+             400
+             #"Illegal Userid"
+             "user ids can contain only numbers, characters, and underscore")]
+           [(not (valid-session-key? session-key))
+            (fail-response
+             400
+             #"Illegal Session Key"
+             "session keys must be valid")]
+           [(valid-password? userid password)
+            (define session-key (generate-session-key))
+            (define training-str (generate-training-str userid password))
+            (log-session-start! userid session-key training-str)
+            (cond [(user-consented? userid)
+                   (main-page userid session-key
+                              (escape-quotes training-str)                              
+                              (string-append server-stem "/" DATALOG-ENDPOINT))]
+                  [else
+                   (consent-page userid session-key
+                                 (form-urlencoded-encode training-str)
+                                 (string-append server-stem "/" CONSENTED-ENDPOINT))])]
+           [else
+            (fail-response
+             403
+             #"Forbidden"
+             "user id and password incorrect")])]
+    [other (fail-response
+            400
+            #"wrong POST data shape"
+            "wrong fields in consented POST data")]))
+
+;; output a consent form page with userid, session-key, training-str, and consent-url embedded
+(define (consent-page userid session-key training-str agree-url)
+  (response/html
+   (include-template "consent-template.html")))
+
+
 ;; handle a session-start
 (define (handle-session-start post-alist)
-  (with-handlers ([(lambda (exn)
-                     (and (exn:fail? exn)
-                          (regexp-match #px"no user named"
-                                        (exn-message exn))))
-                   (lambda (exn)
-                     (fail-response
-                      403
-                      #"Forbidden"
-                      (exn-message exn)))])
-    (match post-alist
-      [(list-no-order
-        (cons 'userid (? string? userid))
-        (cons 'password (? string? pwd)))
-       (cond [(valid-password? userid pwd)
-              (define session-key (generate-session-key))
-              (define training-str (generate-training-str userid pwd))
-              (log-session-start! userid session-key)
-              (main-page userid session-key training-str
-                         record-data-url)]
-             [else
-              (fail-response
-               403
-               #"Forbidden"
-               "user id and password incorrect")])]
-      [other (fail-response
-              400
-              #"wrong POST data shape"
-              "wrong fields in session-start POST data")])))
+  (match post-alist
+    [(list-no-order
+      (cons 'userid (? string? userid))
+      (cons 'password (? string? password)))
+     (cond [(not (valid-userid? userid))
+            (fail-response
+             400
+             #"Illegal Userid"
+             "user ids can contain only numbers, characters, and underscore")]
+           [(valid-password? userid password)
+            (define session-key (generate-session-key))
+            (define training-str (generate-training-str userid password))
+            (log-session-start! userid session-key training-str)
+            (cond [(user-consented? userid)
+                   (main-page userid session-key training-str
+                              (string-append server-stem "/" DATALOG-ENDPOINT))]
+                  [else
+                   (consent-page userid session-key
+                                 (form-urlencoded-encode training-str)
+                                 (string-append server-stem "/" CONSENTED-ENDPOINT))])]
+           [else
+            (fail-response
+             403
+             #"Forbidden"
+             "user id and password incorrect")])]
+    [other (fail-response
+            400
+            #"wrong POST data shape"
+            "wrong fields in session-start POST data")]))
 
-
-;; output a main html page with uid session-key and training-str embedded
+;; output a main html page with userid session-key and training-str embedded
 (define (main-page userid session-key training-str record-data-url)
   (response/html
-   (include-template "mainpage.html")))
+   (include-template "mainpage-template.html")))
 
 ;; given session data, record it and signal completion
 (define (handle-session-data post-jsexpr)
   (match-record-data-jsexpr
    post-jsexpr
-   (λ (uid session-key t n p)
-     (record-session-data! uid session-key t n p)
+   (λ (userid session-key t n p)
+     (record-session-data! userid session-key t n p)
      (response/json "recorded"))
    (λ ()
      (fail-response
@@ -151,13 +216,13 @@
 ;; it independently
 (define (match-record-data-jsexpr jsexpr success-kont fail-kont)
   (match jsexpr
-    [(hash-table ('userid (? string? uid))
+    [(hash-table ('userid (? string? userid))
                  ('sessionkey (? string? session-key))
                  ('data (list (hash-table ['t (? nat? t)]
                                           ['n (? nat? n)]
                                           ['p (? string? p)])
                               ...)))
-     (success-kont uid session-key t n p)]
+     (success-kont userid session-key t n p)]
     [other (fail-kont)]))
 
 (define nat? exact-nonnegative-integer?)
@@ -177,8 +242,7 @@
    code
    header-msg
    (current-seconds) TEXT/HTML-MIME-TYPE
-   (list #;(make-header #"Access-Control-Allow-Origin"
-                      #"*"))
+   (list)
    (list
     (string->bytes/utf-8
      (xexpr->string
@@ -191,9 +255,7 @@
    200 #"Okay"
    (current-seconds)
    #"application/json"
-   ;; CORS header necessary for testing only:
-   (list #;(make-header #"Access-Control-Allow-Origin"
-                      #"*"))
+   (list)
    (list (jsexpr->bytes jsexpr))))
 
 (define (response/html html)
@@ -209,7 +271,7 @@
     (serve/servlet start
                    #:port listen-port
                    #:listen-ip #f
-                   #:servlet-regexp #px"^/(start|record-data)$"
+                   #:servlet-regexp SERVLET-REGEXP
                    #:launch-browser? #f
                    #:extra-files-paths (list (build-path here "htdocs"))
                    #:log-file (build-path here "server.log"))))
@@ -224,8 +286,8 @@
   (check-equal?
    (match-record-data-jsexpr
     test-jsexpr
-    (λ (uid session-key t n p)
-      (list uid session-key t n p))
+    (λ (userid session-key t n p)
+      (list userid session-key t n p))
     (λ ()
       'fail))
    (list "guest" "A6MCslStdKk" '(123 456) '(1 1) '("D" "De"))))

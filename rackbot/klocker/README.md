@@ -8,3 +8,6 @@ in the repo;
 - salt.txt : some server-specific sequence of bytes used in hashing to
    map userids to training strings
 - local-config.rkt : a few server-specific paths
+- users.rktd : file with hashed passwords. E.G.:
+((foo ("bar"))
+ (baz ("quux")))

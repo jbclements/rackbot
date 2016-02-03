@@ -1,18 +1,35 @@
-#lang typed/racket
+#lang typed/racket/base
 
-(require racket/runtime-path)
+(require racket/runtime-path
+         racket/match
+         racket/file)
 
 (require/typed file/md5
                [md5 (Bytes -> Bytes)])
 
-(provide valid-password?)
+(provide valid-userid?
+         valid-password?
+         user-consented?
+         user-consents!)
 
 (define-runtime-path here ".")
+
+(define PASSWORD-FILE (build-path here "users.rktd"))
+(define CONSENT-FILE (build-path here "consent.rktd"))
+
+;; PASSWORDS
+
+;; is this a legal userid?
+(: valid-userid? (String -> Boolean))
+(define (valid-userid? str)
+  (match (regexp-match #px"^[0-9a-zA-Z_]*$" str)
+    [#f #f]
+    [other #t]))
 
 (: get-user-pwd-hash (String -> String))
 (define (get-user-pwd-hash username)
   (match (get-preference (string->symbol username) (lambda () #f) 'timestamp
-                         (build-path here "users.rktd"))
+                         PASSWORD-FILE)
     [(list-rest (? string? s) _1) s]
     [#f (error 'get-user-pwd-hash (format "no user named ~v" username))]
     [other (error 'get-user-pwd-hash
@@ -26,10 +43,53 @@
    (bytes->string/latin-1 (md5 (string->bytes/utf-8 pwd)))
    (get-user-pwd-hash uid)))
 
+;; CONSENT
+
+(: user-consented? (String -> Boolean))
+(define (user-consented? username)
+  (match (get-preference (string->symbol username) (lambda () #f) 'timestamp
+                         CONSENT-FILE)
+    [(? boolean? b) b]
+    [other (error 'user-consented? "internal error 56b129f0")]))
+
+(: user-consents! (String -> Void))
+(define (user-consents! username)
+  (thread
+   (λ ()
+     (let loop ((fail-count 0))
+       (cond [(<= MAX-TRIES fail-count)
+              (log-error (format "failed to write consented pref for user ~a"
+                                 username))]
+             [else
+              (put-preferences (list (string->symbol username))
+                               (list #t)
+                               (λ (lockfile)
+                                 (sleep (+ BASE-SLEEP
+                                           (random SLEEP-RANGE))))
+                               CONSENT-FILE)]))))
+  (void))
+
+;; try this many times before giving up:
+(define MAX-TRIES 5)
+;; wait at least this long before trying to write the pref again:
+(define BASE-SLEEP 300)
+;; adjust the sleep upward by a random # of secs in [0..SLEEP-RANGE]
+;; to keep bouncing requests from continuing to bounce.
+(define SLEEP-RANGE 60)
+
 
 (module+ test
   (require typed/rackunit)
-  (check-not-exn (λ () (get-user-pwd-hash "clements"))))
+  
+  (check-not-exn (λ () (get-user-pwd-hash "clements")))
+
+  (check-true (valid-password? "guest" "40"))
+
+  (check-true (user-consented? "consenter"))
+  (check-false (user-consented? "non-consenter"))
+
+  (check-true (valid-userid? "ath3224_3728hhho"))
+  (check-false (valid-userid? "ath3224_3728h#hho")))
 
 
 

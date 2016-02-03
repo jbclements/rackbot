@@ -16,17 +16,26 @@
 
 (define HOST 
   "localhost"
+  #;"king.brinckerhoff.org"
   )
 
 (define PORT
-  8027)
+  8027
+  #;443)
 
-(define (gett . args)
-  (remote-call/get HOST PORT (apply klocker-url args)))
+(define PROTOCOL
+  'http)
+
+(define (gett endpoint)
+  (remote-call/get HOST PORT endpoint #:protocol PROTOCOL))
 
 (define (postt endpoint jsexpr)
-  (remote-call/post HOST PORT (klocker-url endpoint #f)
-                    (jsexpr->bytes jsexpr)))
+  (remote-call/post HOST PORT endpoint
+                    #:protocol PROTOCOL
+                    jsexpr))
+
+(define (postt/core endpoint bytes)
+  (remote-call/post/core HOST PORT endpoint bytes #:protocol PROTOCOL))
 
 (define (all-but-last l)
   (cond [(empty? l) (raise-argument-error 'all-but-last
@@ -63,7 +72,8 @@
   (test-case
    "404s"
    ;; simple 404:
-   (check-match (remote-call/get/core HOST PORT (klocker-url "blothints" #f))
+   (check-match (remote-call/get/core HOST PORT "/blothints"
+                                      #:protocol PROTOCOL)
                 (list (regexp #"^HTTP/1.1 404")
                       _1
                       (? (port-containing "not found") _3))))
@@ -71,8 +81,7 @@
   
   (test-case
    "bad JSON"
-   (check-match (remote-call/post/core HOST PORT (klocker-url "start" #f)
-                                       #"bogodata")
+   (check-match (postt/core "/start" #"bogodata")
                 (list (regexp #px"^HTTP/1.1 400")
                       _1
                       _2)))
@@ -84,63 +93,77 @@
   (test-case
    "missing field"
    (check-match
-    (remote-call/post/core HOST PORT (klocker-url "start" #f)
-                           #"userid=this+is+my+name")
+    (postt/core "/start" #"userid=this+is+my+name")
     (list (regexp #px"^HTTP/1.1 400 wrong POST data shape")
+          _2 _3)))
+
+  (test-case
+   "illegal userid"
+   (check-match
+    (postt/core "/start" #"userid=this+is+my+name&password=bogo")
+    (list (regexp #px"^HTTP/1.1 400 Illegal Userid")
           _2 _3)))
   
   (test-case
    "unknown user"
    (check-match
-    (remote-call/post/core HOST PORT (klocker-url "start" #f)
-                           #"userid=this+is+my+name&password=and+my+password")
+    (postt/core "/start" #"userid=thisismyname&password=and+my+password")
     (list (regexp #px"^HTTP/1.1 403 Forbidden") _2 _3)))
 
+  (test-case
+   "successful login, no consent yet"
+   (check-pred
+    (λ (response)
+      (regexp-match #px"INFORMED CONSENT" response))
+    (postt "/start" #"userid=nonconsenter&password=40")))
+
+  (test-case
+   "successful post-consent"
+   (check-pred
+    (λ (response)
+      (regexp-match #px"HERE IS YOUR PASSWORD" response))
+    (postt "/record-consent" #"userdi=guest&sessionid=bogus!&trainingstr=bogustoo!")))
+  
   (test-case
    "successful login"
    (check-pred
     (λ (response)
       (regexp-match #px"HERE IS YOUR PASSWORD" response))
-    (remote-call/post HOST PORT (klocker-url "start" #f)
-                      #"userid=guest&password=40")))
+    (postt "/start" #"userid=consenter&password=40")))
 
   
   (test-case
    "session data"
    (check-match
-    (postt "record-data" (hash 'userid "clements"
-                               'sessionkey "7728koh"
-                               'data (list (hash 't 2340
-                                                 'n 2
-                                                 'p "a")
-                                           (hash 't 2640
-                                                 'n 2
-                                                 'p "ab")
-                                           (hash 't 3140
-                                                 'n 2
-                                                 'p "abc")
-                                           (hash 't 3362
-                                                 'n 2
-                                                 'p "ab")
-                                           (hash 't 3961
-                                                 'n 2
-                                                 'p "abq"))))
+    (postt "/record-data"
+           (jsexpr->bytes
+            (hash 'userid "clements"
+                  'sessionkey "7728koh"
+                  'data (list (hash 't 2340
+                                    'n 2
+                                    'p "a")
+                              (hash 't 2640
+                                    'n 2
+                                    'p "ab")
+                              (hash 't 3140
+                                    'n 2
+                                    'p "abc")
+                              (hash 't 3362
+                                    'n 2
+                                    'p "ab")
+                              (hash 't 3961
+                                    'n 2
+                                    'p "abq")))))
     "recorded"))
   
-  #;(check-match (postt "start" (hash 'userid "truncheon"
+  #;(check-match (postt "/start" (hash 'userid "truncheon"
                                     'password "bootie"
                                     'timestamp 9287))
-               (hash-table ('sessionkey (? long-string? _1))
-                           ('trainingstr (? string? _2))))
+               (jsexpr->bytes
+                (hash-table ('sessionkey (? long-string? _1))
+                            ('trainingstr (? string? _2)))))
    
-   ;; latest event
    
-   ;; near miss on the device name:
-   #;(check-match (remote-call/get/core HOST PORT (klocker-url "latest-event"
-                                                             `((device uhnoth))))
-                (list (regexp #px"^HTTP/1.1 40[04]")
-                      _1
-                      (? (port-containing "uhnoth") _3)))
    
 
    

@@ -31,6 +31,9 @@
 ;; over 100K trials. (about 1 in 55K)
 (define SESSION-KEY-BYTES 8)
 
+;; these are base64-encoded, so they get longer:
+(define MAX-SESSION-KEY-LENGTH 16)
+
 (define TESTING-STR-SALT (file->bytes (build-path here "salt.txt")))
 
 
@@ -44,6 +47,13 @@
       base64-encode
       strip-trailing-equals
       bytes->string/utf-8))
+
+(: valid-session-key? (String -> Boolean))
+(define (valid-session-key? str)
+  (and (regexp-match #px"^[a-zA-Z0-9+/]+$" str)
+       (< (string-length str)
+          MAX-SESSION-KEY-LENGTH)
+       #t))
 
 ;; strip the trailing =\r\n off of the base64-encoding
 (: strip-trailing-equals (Bytes -> Bytes))
@@ -101,14 +111,13 @@
 ;; LOGGING
 
 ;; log a session beginning.
-(: log-session-start! (String String -> Void))
-(define (log-session-start! uid session-key)
-  (define local-timestamp (inexact->exact
-                           (floor (current-inexact-milliseconds))))
-  (log-str! (format "~s"
-                    `(session-start ,uid
-                                    ,session-key))))
+(: log-session-start! (String String String -> Void))
+(define (log-session-start! uid session-key training-str)
+  (log-str! (format "~s" `(session-start ,uid
+                                         ,session-key
+                                         ,training-str))))
 
+;; record keystroke data from a session.
 (: record-session-data! (String String (Listof Natural)
                                 (Listof Natural)
                                 (Listof String) -> Void))
@@ -144,7 +153,10 @@
 (module+ test
   (require typed/rackunit)
   (check-equal? (molis-hai-cleanup " abcd") "abcd")
-  (check-equal? (molis-hai-cleanup " abcd ") "abcd a"))
+  (check-equal? (molis-hai-cleanup " abcd ") "abcd a")
+  (check-true (valid-session-key? "7897+/3htasthAT"))
+  (check-false (valid-session-key? "7897+/3htasthATH7897+/3htasthATH7897+/3htasthATH"))
+  (check-false (valid-session-key? "7897+/3htasth>TH")))
 
 ;; flush every so often (in seconds)
 (define FLUSH-INTERVAL 30)

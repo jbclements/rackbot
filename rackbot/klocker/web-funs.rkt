@@ -12,19 +12,25 @@
          (only-in racket/list add-between))
 
 (provide (contract-out
-          [remote-call/get (-> string? number? string? jsexpr?)]
-          [remote-call/get/core (-> string? number? string? (list/c bytes? (listof bytes?) input-port?))]
+          [remote-call/get (->* (string? number? string?)
+                                (#:protocol protocol?)
+                                jsexpr?)]
+          [remote-call/get/core (->* (string? number? string?)
+                                     (#:protocol protocol?)
+                                     (list/c bytes? (listof bytes?) input-port?))]
           [remote-call/post
            (->* (string? number? string? bytes?)
-                (#:content-type bytes?)
+                (#:content-type bytes? #:protocol protocol?)
                 (or/c bytes? jsexpr?))]
           [remote-call/post/core
            (->* (string? number? string? bytes?)
-                (#:content-type bytes?)
+                (#:content-type bytes? #:protocol protocol?)
                 (list/c bytes? (listof bytes?) input-port?))]
           [klocker-url
            (-> string? (or/c query? #f) string?)])
          parse-results)
+
+(define protocol? (symbols 'http 'https))
 
 (define-logger klocker)
 
@@ -62,31 +68,45 @@
 
 ;; given a host, port, and URI, make a GET request and return the
 ;; result as a jsexpr
-(define (remote-call/get host port uri)
-  (apply parse-results (remote-call/get/core host port uri)))
+(define (remote-call/get host port uri #:protocol [protocol 'https])
+  (apply parse-results (remote-call/get/core host port uri
+                                             #:protocol protocol)))
 
 ;; given a URL, make a POST request and wait for a succesful response, returning a jsexpr
 (define (remote-call/post host port uri post-bytes
-                          #:content-type [content-type #"application/json"])
+                          #:content-type [content-type #"application/json"]
+                          #:protocol [protocol 'https])
   (apply parse-results (remote-call/post/core host port uri post-bytes
-                                                #:content-type content-type)))
+                                                #:content-type content-type
+                                                #:protocol protocol)))
 
 
 
 ;; given a URL, make a GET request and wait for a response
-(define (remote-call/get/core host port uri)
+(define (remote-call/get/core host port uri
+                              #:protocol [protocol 'https])
   (log-klocker-debug "remote-call/get/core: args: ~a"
              (list host port uri))
-  (call-with-values (lambda () (http-sendrecv host uri #:port port)) list))
+  (call-with-values (lambda () (http-sendrecv host uri
+                                              #:port port
+                                              #:ssl? (match protocol
+                                                       ['https 'secure]
+                                                       ['http #f])))
+                    list))
 
 
-(define (remote-call/post/core host port uri post-bytes #:content-type [content-type #"application/json"])
+(define (remote-call/post/core host port uri post-bytes
+                               #:content-type [content-type #"application/json"]
+                               #:protocol [protocol 'https])
   (log-klocker-debug "remote-call/post/core: args: ~a" 
                    (list host port uri post-bytes))
   (call-with-values
    (lambda () (http-sendrecv host uri #:port port #:method 'POST
                              #:headers (list (bytes-append #"Content-Type: "content-type))
-                             #:data post-bytes))
+                             #:data post-bytes
+                             #:ssl? (match protocol
+                                      ['https 'secure]
+                                      ['http #f])))
    list))
 
 ;; given a list of header strings, find the one with the given name and return
