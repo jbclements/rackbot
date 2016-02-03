@@ -135,6 +135,7 @@
              "session keys must be valid")]
            [else (match (session-info session-key)
                    [(list user training-str)
+                    (user-consents! user)
                     (main-page session-key
                                (escape-quotes training-str)
                                datalog-url)]
