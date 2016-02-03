@@ -15,16 +15,17 @@
 (define-logger klocker)
 
 (define HOST 
-  "localhost"
-  #;"king.brinckerhoff.org"
+  #;"localhost"
+  "king.brinckerhoff.org"
   )
 
 (define PORT
-  8027
-  #;443)
+  #;8027
+  443)
 
 (define PROTOCOL
-  'http)
+  #;'http
+  'https)
 
 (define (gett endpoint)
   (remote-call/get HOST PORT endpoint #:protocol PROTOCOL))
