@@ -5,7 +5,6 @@
          molis-hai/char-model
          molis-hai/example-model
          racket/runtime-path
-         threading
          ;racket/match
          ;file/md5
          (only-in racket/list take)
@@ -14,55 +13,21 @@
                   file->bytes)
          "local-config.rkt")
 
-(require/typed net/base64
-               [base64-encode (Bytes -> Bytes)])
-
 (require/typed sha
                [sha224 (Bytes -> Bytes)])
 
 (define-runtime-path here ".")
 
-(provide generate-session-key
-         generate-training-str
+(provide generate-training-str
          log-session-start!
          record-session-data!)
 
-;; 64 bits should give a very low collision likelihood
-;; over 100K trials. (about 1 in 55K)
-(define SESSION-KEY-BYTES 8)
 
-;; these are base64-encoded, so they get longer:
-(define MAX-SESSION-KEY-LENGTH 16)
 
 (define TESTING-STR-SALT (file->bytes (build-path here "salt.txt")))
 
 
 (define TESTING-STR-BITS 56)
-
-;; SESSION KEY GENERATION
-
-(: generate-session-key (-> String))
-(define (generate-session-key)
-  (~> (random-bytes SESSION-KEY-BYTES)
-      base64-encode
-      strip-trailing-equals
-      bytes->string/utf-8))
-
-(: valid-session-key? (String -> Boolean))
-(define (valid-session-key? str)
-  (and (regexp-match #px"^[a-zA-Z0-9+/]+$" str)
-       (< (string-length str)
-          MAX-SESSION-KEY-LENGTH)
-       #t))
-
-;; strip the trailing =\r\n off of the base64-encoding
-(: strip-trailing-equals (Bytes -> Bytes))
-(define (strip-trailing-equals encoded)
-  (cond [(equal? (subbytes encoded (- (bytes-length encoded) 3)) #"=\r\n")
-         (subbytes encoded 0 (- (bytes-length encoded) 3))]
-        [else (raise-argument-error 'strip-trailing-equals
-                                    "byte-string ending with =\\r\\n"
-                                    0 encoded)]))
 
 ;; PASSWORD GENERATION
 
@@ -118,10 +83,10 @@
                                          ,training-str))))
 
 ;; record keystroke data from a session.
-(: record-session-data! (String String (Listof Natural)
+(: record-session-data! (String (Listof Natural)
                                 (Listof Natural)
                                 (Listof String) -> Void))
-(define (record-session-data! uid session-key ts ns ps)
+(define (record-session-data! session-key ts ns ps)
   (let loop : Void
     ([ts ts]
      [ns ns]
@@ -131,11 +96,11 @@
           [(or (null? ts) (null? ns) (null? ps))
            (raise-argument-error 'record-session-data!
                                  "lists of same length"
-                                 2 uid session-key
+                                 1 session-key
                                  (list ts ns ps))]
           [else (log-str! (format "~s"
                                   (list 'session-data
-                                        uid session-key
+                                        session-key
                                         (car ts)
                                         (car ns)
                                         (car ps))))
@@ -153,10 +118,7 @@
 (module+ test
   (require typed/rackunit)
   (check-equal? (molis-hai-cleanup " abcd") "abcd")
-  (check-equal? (molis-hai-cleanup " abcd ") "abcd a")
-  (check-true (valid-session-key? "7897+/3htasthAT"))
-  (check-false (valid-session-key? "7897+/3htasthATH7897+/3htasthATH7897+/3htasthATH"))
-  (check-false (valid-session-key? "7897+/3htasth>TH")))
+  (check-equal? (molis-hai-cleanup " abcd ") "abcd a"))
 
 ;; flush every so often (in seconds)
 (define FLUSH-INTERVAL 30)

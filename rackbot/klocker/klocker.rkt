@@ -15,6 +15,7 @@
 ;; - make /etc/service for server itself.
 ;; - session-start must include training string
 ;; - use 'label' attribute
+;; - on hash table reset, allow all sessions? Or reset session?
 
 ;; expected endpoints:
 
@@ -45,7 +46,8 @@
          racket/runtime-path
          "user-auth.rkt"
          "klocker-util.rkt"
-         "local-config.rkt")
+         "local-config.rkt"
+         "session-key-mgmt.rkt")
 
 (define START-ENDPOINT "start")
 (define DATALOG-ENDPOINT "record-data")
@@ -60,8 +62,9 @@
 ;; handle a request. "front door" of the server
 (define (start req)
   (with-handlers ;; log all errors...
-      ([(lambda (exn) #t)
+      (#;[(lambda (exn) #t)
         (lambda (exn)
+          
           (log-error (exn-message exn))
           (fail-response 500 #"server exception"
                  "Server-side exception. Check logs for more detail."))])
@@ -119,37 +122,24 @@
 ;; handle a click on "I agree"
 (define (handle-consented post-alist)
   (match post-alist
-    [(list-no-order
-      (cons 'userid (? string? userid))
-      (cons 'session-key (? string? session-key))
-      (cons 'training-str (? string? training-str)))
-     (cond [(not (valid-userid? userid))
-            (fail-response
-             400
-             #"Illegal Userid"
-             "user ids can contain only numbers, characters, and underscore")]
-           [(not (valid-session-key? session-key))
+    [(list
+      (cons 'session-key (? string? session-key)))
+     (cond [(not (valid-session-key? session-key))
             (fail-response
              400
              #"Illegal Session Key"
              "session keys must be valid")]
-           [(valid-password? userid password)
-            (define session-key (generate-session-key))
-            (define training-str (generate-training-str userid password))
-            (log-session-start! userid session-key training-str)
-            (cond [(user-consented? userid)
-                   (main-page userid session-key
+           [else (match (session-info session-key)
+                   [(list )])]
+           [(session-active? session-key)
+            (main-page userid session-key
                               (escape-quotes training-str)                              
                               (string-append server-stem "/" DATALOG-ENDPOINT))]
-                  [else
-                   (consent-page userid session-key
-                                 (form-urlencoded-encode training-str)
-                                 (string-append server-stem "/" CONSENTED-ENDPOINT))])]
            [else
             (fail-response
              403
              #"Forbidden"
-             "user id and password incorrect")])]
+             (format "this session key does not appear to be active: ~v" session-key))])]
     [other (fail-response
             400
             #"wrong POST data shape"
@@ -174,15 +164,22 @@
              "user ids can contain only numbers, characters, and underscore")]
            [(valid-password? userid password)
             (define session-key (generate-session-key))
-            (define training-str (generate-training-str userid password))
-            (log-session-start! userid session-key training-str)
-            (cond [(user-consented? userid)
-                   (main-page userid session-key training-str
-                              (string-append server-stem "/" DATALOG-ENDPOINT))]
-                  [else
-                   (consent-page userid session-key
-                                 (form-urlencoded-encode training-str)
-                                 (string-append server-stem "/" CONSENTED-ENDPOINT))])]
+            (match (maybe-start-user-session userid session-key)
+              [#t
+               (define training-str (generate-training-str userid password))
+               (log-session-start! userid session-key training-str)
+               (cond [(user-consented? userid)
+                      (main-page userid session-key training-str
+                                 (string-append server-stem "/" DATALOG-ENDPOINT))]
+                     [else
+                      (consent-page userid session-key
+                                    (form-urlencoded-encode training-str)
+                                    (string-append server-stem "/" CONSENTED-ENDPOINT))])]
+              [#f
+               (fail-response
+                403
+                #"Forbidden"
+                "It appears that it's too soon for you to practice your password again.")])]
            [else
             (fail-response
              403
@@ -198,12 +195,16 @@
   (response/html
    (include-template "mainpage-template.html")))
 
+;; for embedding in JavaScript, double-quotes must be quoted:
+(define (escape-quotes str)
+  (regexp-replace* #px"\"" str "\\\\\""))
+
 ;; given session data, record it and signal completion
 (define (handle-session-data post-jsexpr)
   (match-record-data-jsexpr
    post-jsexpr
-   (λ (userid session-key t n p)
-     (record-session-data! userid session-key t n p)
+   (λ (session-key t n p)
+     (record-session-data! session-key t n p)
      (response/json "recorded"))
    (λ ()
      (fail-response
@@ -216,8 +217,7 @@
 ;; it independently
 (define (match-record-data-jsexpr jsexpr success-kont fail-kont)
   (match jsexpr
-    [(hash-table ('userid (? string? userid))
-                 ('sessionkey (? string? session-key))
+    [(hash-table ('sessionkey (? string? session-key))
                  ('data (list (hash-table ['t (? nat? t)]
                                           ['n (? nat? n)]
                                           ['p (? string? p)])
@@ -278,6 +278,9 @@
 
 (module+ test
   (require rackunit)
+  
+
+  (check-equal? (escape-quotes "ab'\"cd") "ab'\\\"cd")
   (define test-jsexpr
     (bytes->jsexpr
      #"{\"userid\":\"guest\",\"sessionkey\":\"A6MCslStdKk\",\"data\":

@@ -3,7 +3,6 @@ var PwdEntry = (function () {
   var the_password = false;
   var the_session_key = false;
   var the_timestamp = false;
-  var the_userid = false;
   var the_record_data_url = false;
 
   var t1 = 'Do you remember your password from last time? Type as much' +
@@ -66,7 +65,6 @@ var PwdEntry = (function () {
 
   // start the program running:
   function go (uid, sessionkey, trainingstr, recorddataurl) {
-    the_userid = uid;
     the_session_key = sessionkey;
     the_password = trainingstr;
     the_record_data_url = recorddataurl;
@@ -263,8 +261,7 @@ var PwdEntry = (function () {
     // between function calls.
     var to_send = statequeue;
     statequeue = [];
-    var packet = {userid: the_userid,
-                  sessionkey: the_session_key,
+    var packet = {sessionkey: the_session_key,
                   data: to_send};
     $.post(the_record_data_url,
            JSON.stringify(packet),

@@ -137,8 +137,7 @@
    (check-match
     (postt "/record-data"
            (jsexpr->bytes
-            (hash 'userid "clements"
-                  'sessionkey "7728koh"
+            (hash 'sessionkey "7728koh"
                   'data (list (hash 't 2340
                                     'n 2
                                     'p "a")
@@ -155,13 +154,6 @@
                                     'n 2
                                     'p "abq")))))
     "recorded"))
-  
-  #;(check-match (postt "/start" (hash 'userid "truncheon"
-                                    'password "bootie"
-                                    'timestamp 9287))
-               (jsexpr->bytes
-                (hash-table ('sessionkey (? long-string? _1))
-                            ('trainingstr (? string? _2)))))
    
    
    
