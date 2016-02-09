@@ -1,7 +1,8 @@
 #lang typed/racket
 
 (provide all-successes
-         successes-since)
+         successes-since
+         group-successes)
 
 (require "tai64n.rkt")
 (require/typed srfi/19
