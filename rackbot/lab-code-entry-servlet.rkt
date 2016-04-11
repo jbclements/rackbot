@@ -10,7 +10,7 @@
          racket/list
          "lab-code-hash.rkt")
 
-(define THIS-QTR 2162)
+(define THIS-QTR 2164)
 
 ;; a small servlet that allows students to enter their lab numbers
 
@@ -20,12 +20,12 @@
   (flush-output))
 
 ;; log a "successful" line
-(define (log-successes login data)
-  (log-labcode-info "successes: ~s ~s" login data))
+(define (log-successes login data entered-codes)
+  (log-labcode-info "successes: ~s ~s ~s" login data entered-codes))
 
 ;; log the failures
-(define (log-failures login failure-data)
-  (log-labcode-info "failures: ~s ~s" login failure-data))
+(define (log-failures login failure-data entered-codes)
+  (log-labcode-info "failures: ~s ~s ~s" login failure-data entered-codes))
 
 ;(define-type SuccessResult (Pair 'success (Pair String (Listof Any))))
 ;(define-predicate success-result? SuccessResult)
@@ -49,24 +49,28 @@
        "all entries were blank")
      (define results
        (for/list ([pair (in-list nonempties)])
-         (list (car pair)
+         (match-define (list labnum entered-code) pair)
+         (define downcased-code (string-downcase entered-code))
+         (list labnum
                (equal?
-                (string-downcase (cadr pair))
+                downcased-code
                 (bytes->string/utf-8
                  (compute-hash (string-downcase login)
                                THIS-QTR
-                               (car pair)))))))
+                               labnum)))
+               downcased-code)))
      (define-values (successes failures)
        (partition (lambda (result) (cadr result)) results))
      (define success-labs (map car successes))
      (define failure-labs (map car failures))
-     (log-successes login success-labs)
-     (log-failures login failure-labs)
+     (log-successes login success-labs (map third successes))
+     (log-failures login failure-labs (map third failures))
      (success-page success-labs
                    failure-labs)]
     [other
      "Interval Server Error 22732nth2412..."]
   ))
+
 
 (module+ test
   (require rackunit)
@@ -116,10 +120,10 @@
 
 ;; display a success page (incl. successes and failures)
 (define (success-page successes failures)
-  `((p "Successes: " ,(format "~a" successes))
+  `((h3 "Results:")
+    (ul (p ,(format "~a" (length successes))" success(es) on lab #s: " ,(format "~a" successes))
+        (p ,(format "~a" (length failures))" failure(s) on lab #s: " ,(format "~a" failures)))
     (p "If you see successes, these should now have been logged.")
-    (p "Failures (don't recognize these numbers, in wrong slot, "
-       "or belong to someone else): " ,(format "~a" failures))
     (p "If you see failures, don't panic. Perhaps you entered "
        "the number wrong, or perhaps I gave it to you wrong. "
        "Find me and we'll figure it out.")))
