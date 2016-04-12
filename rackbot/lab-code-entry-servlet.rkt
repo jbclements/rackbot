@@ -20,8 +20,8 @@
   (flush-output))
 
 ;; log a "successful" line
-(define (log-successes login data entered-codes)
-  (log-labcode-info "successes: ~s ~s ~s" login data entered-codes))
+(define (log-successes login data entered-codes qtr)
+  (log-labcode-info "successes: ~s ~s ~s ~s" login data entered-codes qtr))
 
 ;; log the failures
 (define (log-failures login failure-data entered-codes)
@@ -63,7 +63,7 @@
        (partition (lambda (result) (cadr result)) results))
      (define success-labs (map car successes))
      (define failure-labs (map car failures))
-     (log-successes login success-labs (map third successes))
+     (log-successes login success-labs (map third successes) THIS-QTR)
      (log-failures login failure-labs (map third failures))
      (success-page success-labs
                    failure-labs)]
