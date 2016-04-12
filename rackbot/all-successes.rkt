@@ -73,7 +73,9 @@
 (define (parse-line l)
   (match (regexp-match SUCCESS-REGEXP l)
     [#f 'not-success]
-    [(list _1 (? string? timestamp) (? string? id) (? string? labs))
+    ;; starting in 2168, we can assume that the "other" contains the quarter number
+    ;; (among other things)
+    [(list _1 (? string? timestamp) (? string? id) (? string? labs) (? string? other))
      (define ts (parse-tai64n timestamp))
      (: nums (Listof Labnum))
      (define nums
@@ -92,7 +94,7 @@
 
 
 (define SUCCESS-REGEXP
-  #px"^@([0-9a-f]+) successes: \"([^\"]+)\" (.*)$")
+  #px"^@([0-9a-f]+) successes: \"([^\"]+)\" \\([0-9 ]*\\)(.*)$")
 
 
 (module+ test
