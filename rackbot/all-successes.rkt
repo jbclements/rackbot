@@ -94,7 +94,7 @@
 
 
 (define SUCCESS-REGEXP
-  #px"^@([0-9a-f]+) successes: \"([^\"]+)\" \\([0-9 ]*\\)(.*)$")
+  #px"^@([0-9a-f]+) successes: \"([^\"]+)\" (\\([0-9 ]*\\))(.*)$")
 
 
 (module+ test
