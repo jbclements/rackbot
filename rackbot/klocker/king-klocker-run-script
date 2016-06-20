@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# this script ran on king, pulling entries out of the pipe and logging them with dates for later processing.
+exec setuidgid rackbot multilog t s10000000 n20 /home/rackbot/rackbot-log < /home/rackbot/log-pipe
