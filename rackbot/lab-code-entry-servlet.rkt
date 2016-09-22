@@ -11,6 +11,8 @@
          "lab-code-hash.rkt")
 
 (define THIS-QTR 2164)
+(define LISTEN-PORT 8026)
+(define LAB-SLOTS 12)
 
 ;; a small servlet that allows students to enter their lab numbers
 
@@ -101,7 +103,7 @@
 (define whole-lab-formlet
   (formlet* `(div
               (p "login id: " ,{input-string . =>* . login})
-              ,@(for/list ([i (in-range 1 20)])
+              ,@(for/list ([i (in-range 1 LAB-SLOTS)])
                   `(p ,{(lab-formlet i) . =>* . codes}))
               (p ,{(submit #"go!") . =>* . foo})
               )
@@ -142,7 +144,7 @@
                      (log-error (exn-message exn))
                      (raise exn))])
     (serve/servlet start
-                   #:port 8026
+                   #:port LISTEN-PORT
                    #:listen-ip #f
                    #:launch-browser? #f))  )
 
