@@ -19,9 +19,11 @@
 
 (define-type User String)
 (define-type Labnum Natural)
+(define-type ClassID String)
 (define-type NotSuccess 'not-success)
 (define-type Success (List User Time
-                           (Listof Labnum)))
+                           (Listof Labnum)
+                           ClassID))
 (define-type LogLine (U NotSuccess Success))
 (define-type Info (List User (Listof Labnum)))
 (define-type Infos (Listof Info))
@@ -30,6 +32,11 @@
 (: all-successes (-> Infos))
 (define (all-successes)
   (path->successes LOG-PATH (λ (i) #t)))
+
+;; filter out only those infos with the given ClassID
+(: in-class (ClassID Infos -> Infos))
+(define (in-class class-id infos)
+  (filter (λ ([i : Info]) (string=? class-id (fourth i))) infos))
 
 ;; return all successes since a specified TAI second
 ;; ... it may seem crazy to require a TAI second rather
@@ -61,9 +68,10 @@
   (for/list ([group (in-list grouped)])
     (list (caar group)
           (sort
-           (remove-duplicates (apply append
-                                     (map (ann caddr (Success -> (Listof Labnum)))
-                                          group)))
+           (remove-duplicates
+            (apply append
+                   (map (ann caddr (Success -> (Listof Labnum)))
+                        group)))
            <))))
 
 
@@ -75,27 +83,26 @@
     [#f 'not-success]
     ;; starting in 2168, we can assume that the "other" contains the quarter number
     ;; (among other things)
-    [(list _1 (? string? timestamp) (? string? id) (? string? labs) (? string? other))
+    [(list _1 (? string? timestamp) (? string? id) (? string? labs)
+           (? string? class-id))
      (define ts (parse-tai64n timestamp))
      (: nums (Listof Labnum))
      (define nums
        (match (read (open-input-string labs))
          [(? ListOfNats? lon) lon]))
-     (ann (list id ts (ann nums (Listof Labnum))) Success)]
+     (ann (list id ts (ann nums (Listof Labnum))
+                (string-trim class-id)) Success)]
     [other
      (error 'parse-successes
             "internal error, regexp didn't produce expected result")]))
+
+(define SUCCESS-REGEXP
+  #px"^@([0-9a-f]+) successes: \"([^\"]+)\" (\\([0-9 ]*\\))(.*)$")
 
 (define-predicate ListOfStrs? (Listof String))
 (define-predicate ListOfNats? (Listof Natural))
 (define-predicate Info? Info)
 (define-predicate Success? Success)
-
-
-
-(define SUCCESS-REGEXP
-  #px"^@([0-9a-f]+) successes: \"([^\"]+)\" (\\([0-9 ]*\\))(.*)$")
-
 
 (module+ test
   (require typed/rackunit)
@@ -103,20 +110,20 @@
   (define test-tai64n "4000000037c219bf2ef02e94")
   (define test-time (parse-tai64n test-tai64n))
   (check-equal?
-   (parse-line "@4000000037c219bf2ef02e94 successes: \"football\" (9 3)")
-   (list "football" test-time (list 9 3)))
+   (parse-line "@4000000037c219bf2ef02e94 successes: \"football\" (9 3) 2168")
+   (list "football" test-time (list 9 3) "2168"))
 
   (check-equal?
-   (parse-line "@4000000037c219bf2ef02e94 suses: \"football\" (9 3)")
+   (parse-line "@4000000037c219bf2ef02e94 suses: \"football\" (9 3) 2168")
    'not-success)
   
   (check-equal?
    (group-successes
     (list
-     (list "football" test-time '(9 3))
-     (list "soccer" test-time '(2))
-     (list "football" test-time '(10 3))
-     (list "larry" test-time '())))
+     (list "football" test-time '(9 3) "zokbar")
+     (list "soccer" test-time '(2) "oht.")
+     (list "football" test-time '(10 3) "th.nhu")
+     (list "larry" test-time '() "h.h.h.h")))
    '(("football" (3 9 10))
      ("soccer" (2))
      ("larry" ()))))
