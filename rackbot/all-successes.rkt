@@ -2,7 +2,8 @@
 
 (provide all-successes
          all-successes-in-class
-         successes-since)
+         successes-since
+         path->lines)
 
 (require "tai64n.rkt")
 (require/typed srfi/19
@@ -58,11 +59,22 @@
 ;; return all of the recorded successes in a given file
 ;; that satisfy the time-pred
 (: path->successes (Path-String (Success -> Boolean) -> Infos))
-(define (path->successes path time-pred)
-  (define lines (map parse-line (file->lines path)))
+(define (path->successes path pred)
+  (define lines (path->lines path))
+  (lines->successes lines pred))
+
+;; return all of the parsed lines from a given path
+(: path->lines (Path-String -> (Listof LogLine)))
+(define (path->lines path)
+  (map parse-line (file->lines path)))
+
+;; filter out the successes that satisfy a predicate, call
+;; group-successes
+(: lines->successes ((Listof LogLine) (Success -> Boolean) -> Infos))
+(define (lines->successes lines pred)
   (: lines2 (Listof Success))
   (define lines2 (filter Success? lines))
-  (define lines3 (filter time-pred lines2))
+  (define lines3 (filter pred lines2))
   (group-successes lines3))
 
 ;; group successes by user
@@ -88,6 +100,7 @@
     ;; starting in 2168, we can assume that the "other" contains the quarter number
     ;; (among other things)
     [(list _1 (? string? timestamp) (? string? id) (? string? labs)
+           (? string? passwords-entered)
            (? string? class-id))
      (define ts (parse-tai64n timestamp))
      (: nums (Listof Labnum))
@@ -101,7 +114,7 @@
             "internal error, regexp didn't produce expected result")]))
 
 (define SUCCESS-REGEXP
-  #px"^@([0-9a-f]+) successes: \"([^\"]+)\" (\\([0-9 ]*\\))(.*)$")
+  #px"^@([0-9a-f]+) successes: \"([^\"]+)\" (\\([0-9 ]*\\)) (\\([^)]*\\))(.*)$")
 
 (define-predicate ListOfStrs? (Listof String))
 (define-predicate ListOfNats? (Listof Natural))
@@ -114,11 +127,13 @@
   (define test-tai64n "4000000037c219bf2ef02e94")
   (define test-time (parse-tai64n test-tai64n))
   (check-equal?
-   (parse-line "@4000000037c219bf2ef02e94 successes: \"football\" (9 3) 2168")
+   (parse-line
+    "@4000000037c219bf2ef02e94 successes: \"football\" (9 3) (\"abba\" \"zabba\") 2168")
    (list "football" test-time (list 9 3) "2168"))
 
   (check-equal?
-   (parse-line "@4000000037c219bf2ef02e94 suses: \"football\" (9 3) 2168")
+   (parse-line
+    "@4000000037c219bf2ef02e94 suses: \"football\" (9 3) (\"abba\" \"zabba\") 2168")
    'not-success)
   
   (check-equal?
@@ -130,4 +145,40 @@
      (list "larry" test-time '() "h.h.h.h")))
    '(("football" (3 9 10))
      ("soccer" (2))
-     ("larry" ()))))
+     ("larry" ())))
+
+  (check-equal?
+   (lines->successes
+    (list
+     (list "football" test-time '(9 3) "zokbar")
+     'not-success
+     (list "soccer" test-time '(2) "oht.")
+     (list "football" test-time '(10 3) "th.nhu")
+     (list "larry" test-time '() "h.h.h.h"))
+    (λ ([s : Success]) (string=? (fourth s) "zokbar")))
+   '(("football" (3 9))))
+
+  (check-equal?
+   (map parse-line
+        (regexp-split #px"\n"
+    "@4000000057e40baa3664b49c Your Web application is running at http://localhost:8026.
+@4000000057e40baa3664bc6c Stop this program at any time to terminate the Web Server.
+@4000000057e40bd61b212314 successes: \"tarsky\" () () 2168
+@4000000057e40bd61b246ed4 failures: \"tarsky\" (5) (\"au333\")
+@4000000057e430e51ac2da5c 
+@4000000057e430e51ac2e22c Web Server stopped.
+@4000000057e4316e0c385d54 Your Web application is running at http://localhost:8026.
+@4000000057e4316e0c386524 Stop this program at any time to terminate the Web Server.
+@4000000057e96b402021e22c successes: \"jpang06\" (1) (\"vivcp8\") 2168
+@4000000057e96b402049675c failures: \"jpang06\" () ()" ))
+   (list
+    'not-success
+    'not-success
+    (list "tarsky" (parse-tai64n "4000000057e40bd61b212314") '() "2168")
+    'not-success
+    'not-success
+    'not-success
+    'not-success
+    'not-success
+    (list "jpang06" (parse-tai64n "4000000057e96b402021e22c") '(1) "2168")
+    'not-success)))
