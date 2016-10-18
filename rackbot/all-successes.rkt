@@ -1,6 +1,7 @@
 #lang typed/racket
 
 (provide all-successes
+         all-successes-in-class
          successes-since)
 
 (require "tai64n.rkt")
@@ -33,10 +34,13 @@
 (define (all-successes)
   (path->successes LOG-PATH (λ (i) #t)))
 
-;; filter out only those infos with the given ClassID
-(: in-class (ClassID Infos -> Infos))
-(define (in-class class-id infos)
-  (filter (λ ([i : Info]) (string=? class-id (fourth i))) infos))
+;; return all of the recorded successes in the default file
+;; for a given class id
+(: all-successes-in-class (ClassID -> Infos))
+(define (all-successes-in-class class-id)
+  (path->successes LOG-PATH
+                   (λ ([i : Success])
+                     (string=? class-id (fourth i)))))
 
 ;; return all successes since a specified TAI second
 ;; ... it may seem crazy to require a TAI second rather
