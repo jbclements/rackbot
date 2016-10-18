@@ -12,6 +12,8 @@
          (only-in racket/list last empty? rest empty first)
          "web-funs.rkt")
 
+;; no automatic testing:
+(module+ main
 (define-logger klocker)
 
 (define HOST 
@@ -160,5 +162,5 @@
    
 
    
-)))
+))))
 

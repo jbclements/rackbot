@@ -87,12 +87,14 @@
                               #:protocol [protocol 'https])
   (log-klocker-debug "remote-call/get/core: args: ~a"
              (list host port uri))
-  (call-with-values (lambda () (http-sendrecv host uri
-                                              #:port port
-                                              #:ssl? (match protocol
-                                                       ['https 'secure]
-                                                       ['http #f])))
-                    list))
+  (call-with-values
+   (lambda ()
+     (http-sendrecv host uri
+                    #:port port
+                    #:ssl? (match protocol
+                             ['https 'secure]
+                             ['http #f])))
+   list))
 
 
 (define (remote-call/post/core host port uri post-bytes
@@ -208,7 +210,8 @@
                 (string-append "/latest-event"))
 
   
-  (check-match (remote-call/get/core "example.com" 80 "/")
+  (check-match (remote-call/get/core "example.com" 80 "/"
+                                     #:protocol 'http)
                (list-rest #"HTTP/1.1 200 OK" rest))
   
   
