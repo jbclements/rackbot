@@ -10,9 +10,9 @@
          racket/list
          "lab-code-hash.rkt")
 
-(define THIS-QTR 2212)
+(define THIS-QTR 2214)
 (define LISTEN-PORT 8026)
-(define LAB-SLOTS 10)
+(define LAB-SLOTS 9)
 
 ;; a small servlet that allows students to enter their lab numbers
 
