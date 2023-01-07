@@ -10,7 +10,7 @@
          racket/list
          "lab-code-hash.rkt")
 
-(define THIS-QTR 2228)
+(define THIS-QTR 2232)
 (define LISTEN-PORT 8026)
 (define LAB-SLOTS 9)
 
@@ -124,7 +124,7 @@
 (define (success-page successes failures)
   (cond [(= (length failures) 0)
          `((h2 "INCREDIBLE VICTORY")
-           (p (format "Lab(s) ~a logged as complete." successes)))]
+           (p ,(format "Lab(s) ~a logged as complete." successes)))]
         [else
   `((h3 "Results:")
     (ul (p ,(format "~a" (length successes))" success(es) on lab #s: " ,(format "~a" successes))
