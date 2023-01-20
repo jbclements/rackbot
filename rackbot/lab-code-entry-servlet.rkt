@@ -52,12 +52,12 @@
      (define results
        (for/list ([pair (in-list nonempties)])
          (match-define (list labnum entered-code) pair)
-         (define downcased-code (string-downcase entered-code))
+         (define downcased-code (string-downcase (string-trim entered-code)))
          (list labnum
                (equal?
                 downcased-code
                 (bytes->string/utf-8
-                 (compute-hash (string-downcase login)
+                 (compute-hash (string-downcase (string-trim login))
                                THIS-QTR
                                labnum)))
                downcased-code)))
