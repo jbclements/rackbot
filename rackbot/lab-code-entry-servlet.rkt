@@ -8,11 +8,18 @@
          racket/date
          racket/match
          racket/list
+         racket/string
+         racket/file
          "lab-code-hash.rkt")
 
 (define THIS-QTR 2232)
 (define LISTEN-PORT 8026)
 (define LAB-SLOTS 9)
+
+(define server-extra-files-path
+  (hash-ref (file->value (build-path (find-system-path 'pref-dir) "rackbot-prefs"))
+            'server-extra-files-path
+            #f))
 
 ;; a small servlet that allows students to enter their lab numbers
 
@@ -150,7 +157,10 @@
     (serve/servlet start
                    #:port LISTEN-PORT
                    #:listen-ip #f
-                   #:launch-browser? #f))  )
+                   #:launch-browser? #f
+                   #:server-extra-files
+                   (cond [server-extra-files-path server-extra-files-path]
+                         [else '()]))))
 
 
 
