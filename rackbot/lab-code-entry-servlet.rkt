@@ -159,7 +159,7 @@
                    #:listen-ip #f
                    #:launch-browser? #f
                    #:extra-files-paths
-                   (cond [server-extra-files-path server-extra-files-path]
+                   (cond [server-extra-files-path (list server-extra-files-path)]
                          [else '()]))))
 
 
