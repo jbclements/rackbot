@@ -158,7 +158,7 @@
                    #:port LISTEN-PORT
                    #:listen-ip #f
                    #:launch-browser? #f
-                   #:server-extra-files
+                   #:extra-files-paths
                    (cond [server-extra-files-path server-extra-files-path]
                          [else '()]))))
 
