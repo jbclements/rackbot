@@ -17,9 +17,12 @@
 (define LAB-SLOTS 9)
 
 (define server-extra-files-path
-  (hash-ref (file->value (build-path (find-system-path 'pref-dir) "rackbot-prefs"))
-            'server-extra-files-path
-            #f))
+  (let ()
+    (define pref-path (build-path (find-system-path 'pref-dir) "rackbot-prefs"))
+    (and (file-exists? pref-path)
+         (hash-ref (file->value pref-path)
+                   'server-extra-files-path
+                   #f))))
 
 ;; a small servlet that allows students to enter their lab numbers
 
