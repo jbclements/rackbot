@@ -4,7 +4,7 @@
 
 (provide
  (contract-out
-  [compute-hash (-> string? qtr-num? string? lab-num? bytes?)]))
+  [compute-hash (-> string? qtr-num? lab-num? bytes?)]))
 
 ;; a legal quarter number
 (define (qtr-num? x)
@@ -54,12 +54,12 @@
 
 ;; given an id, a quarter, and a lab number, generate the secret code
 ;; that the student should enter:
-(define (compute-hash id qtr course labnum) 
+(define (compute-hash id qtr labnum) 
   (define sha-bytes
     (sha256
      (string->bytes/utf-8
-      (format "user: ~v id, qtr: ~v, course: ~v, labnum: ~v, secret, ~v"
-              id qtr labnum course SEKRIT))))
+      (format "user: ~v id, qtr: ~v, labnum: ~v, secret, ~v"
+              id qtr labnum SEKRIT))))
   ;; as long as char-bits is <= 8 and CHARS is
   ;; <= 256, we can just take CHARS bytes from the
   ;; sha-256 and mask off the upper bits.
