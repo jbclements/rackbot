@@ -45,8 +45,12 @@
          racket/runtime-path
          "user-auth.rkt"
          "klocker-util.rkt"
-         "local-config.rkt"
+         ;"local-config.rkt"
          "session-key-mgmt.rkt")
+
+(define fifo-path "bogus value replaceme")
+(define server-stem "bogus value ")
+(define listen-port "bogus value")
 
 (define START-ENDPOINT "start")
 (define DATALOG-ENDPOINT "record-data")

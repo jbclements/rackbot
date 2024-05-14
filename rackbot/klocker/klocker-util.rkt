@@ -11,7 +11,10 @@
          (only-in racket/file
                   get-preference
                   file->bytes)
-         "local-config.rkt")
+         ;"local-config.rkt"
+         )
+
+(define fifo-path "bogus replace me by creating local-config...")
 
 (require/typed sha
                [sha224 (Bytes -> Bytes)])
