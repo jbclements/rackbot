@@ -12,7 +12,7 @@
          racket/file
          "lab-code-hash.rkt")
 
-(define THIS-QTR 2252)
+(define THIS-QTR 2254)
 (define LISTEN-PORT 8026)
 (define LAB-SLOTS 9)
 
