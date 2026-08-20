@@ -47,7 +47,6 @@
      (Pair 'fail (Listof Any))))
 
 ;; accept the bindings passed by the user for the web request.
-;; actually doesn't return...
 (define (handle-bindings logins pairs)
   (match logins
     [(list "")
