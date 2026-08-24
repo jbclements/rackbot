@@ -162,7 +162,18 @@ The grinning bartender slid a bottle and glass across the battered “mahogany�
             (list-ref substitution-map (- ch-int a-ch-int))]
            [else ch]))))
 
-(substitution-cipher "well, I went down to the river today")
+(define reverse-map
+  (map list substitution-map (map (λ (i) (integer->char (+ a-ch-int i))) (range 0 26))))
+
+(define (un-substitution-cipher str)
+  (list->string
+   (for/list ([ch str])
+     (define ch-int (char->integer ch))
+     (cond [(<= a-ch-int ch-int z-ch-int)
+            (cadr (assoc ch reverse-map))]
+           [else ch]))))
+
+
 
 substitution-map
 
@@ -216,22 +227,26 @@ substitution-map
   (check-equal? (len-wrap "i am a frog")  "11i am a frog11")
 
   (check-equal? (vowel-swap "abecedarium over")
-              "ebicideroam uvir")
-(check-equal? (middle-to-end "abc") "acb")
-(check-equal? (middle-to-end "abcde") "abdec")
-(check-equal? (middle-to-end "a") "a")
+                "ebicideroam uvir")
+  (check-equal? (middle-to-end "abc") "acb")
+  (check-equal? (middle-to-end "abcde") "abdec")
+  (check-equal? (middle-to-end "a") "a")
 
   (check-equal? (flip-back "abcde") "edcab")
-(check-equal? (flip-back "repulsive") "evislrepu")
-(check-equal? (flip-back "") "")
+  (check-equal? (flip-back "repulsive") "evislrepu")
+  (check-equal? (flip-back "") "")
 
   (check-equal? (fencepost "abcdefgh") "ahcfedgb")
-(check-equal? (fencepost "abcdefg") "afcdebg")
+  (check-equal? (fencepost "abcdefg") "afcdebg")
 
   (check-equal? (scytale-4 "i am a frog tomorrow")
-              "20*i rtr aoora gmomf ow")
-(check-equal? (scytale-4 "i am a frog tomorrowx")
-              "21*i rtrx aoor-a gmo-mf ow-"))
+                "20*i rtr aoora gmomf ow")
+  (check-equal? (scytale-4 "i am a frog tomorrowx")
+                "21*i rtrx aoor-a gmo-mf ow-")
+
+  (check-equal? 
+   (un-substitution-cipher (substitution-cipher "well, I went down to the river today"))
+   "well, I went down to the river today"))
 
 
 
@@ -249,9 +264,8 @@ substitution-map
   (formlet* `(div
               (p ,(format "Chosen encryptor: ~a" encryptor))
               (p ,(format "Given string: ~a" input-str))
-              (p ,(format "Encrypted string: ~a" encrypted-str) )
-              (p ,(format "Challenge string to be decrypted: ~a"
-                          encrypted-challenge))
+              (p "Encrypted string: " (code ,encrypted-str))
+              (p "Challenge string to be decrypted: " (code ,encrypted-challenge))
               (p "Choose an encryptor: ",{(select-input (map car encryptors) #:selected? (λ (s) (equal? s encryptor))) . =>* . encryptor})
               (p "enter another string to be encoded: " ,{input-string . =>* . str})
               (p ,{(submit "go") . =>* . dc})
