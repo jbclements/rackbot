@@ -263,9 +263,9 @@ substitution-map
 (define (followup-formlet input-str encrypted-str encryptor encrypted-challenge)
   (formlet* `(div
               (p ,(format "Chosen encryptor: ~a" encryptor))
-              (p ,(format "Given string: ~a" input-str))
-              (p "Encrypted string: " (code ,encrypted-str))
-              (p "Challenge string to be decrypted: " (code ,encrypted-challenge))
+              (p "Given string: " (pre  ,input-str))
+              (p "Encrypted string: " (pre ,encrypted-str))
+              (p "Challenge string to be decrypted: " (pre ,encrypted-challenge))
               (p "Choose an encryptor: ",{(select-input (map car encryptors) #:selected? (λ (s) (equal? s encryptor))) . =>* . encryptor})
               (p "enter another string to be encoded: " ,{input-string . =>* . str})
               (p ,{(submit "go") . =>* . dc})
