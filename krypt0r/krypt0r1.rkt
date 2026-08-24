@@ -8,6 +8,21 @@
          racket/file
          (only-in racket/list shuffle range))
 
+
+(define sample-text
+  "“Hello, Ducky, what’s yours?”
+The moon-faced deputy of Silver Springs waddled to the bar, hitched up his trousers, laid a sweat-stained sombrero upon the battered wood, and wiped his perspiring face before replying.
+No one looking at Ducky Drake’s pink and white features and well-padded form would have guessed him to be fifty-two years old, still less would they have imagined that here was the shrewdest and most feared man hunter in the region.
+His indolent, complacent manner masked a brain as keen and sure as a finely tempered blade, and his corpulent, slow-appearing body gave no indication of the surprising strength and agility the man possessed.
+Ducky returned his bandanna to his pocket and regarded the barkeeper in the Colorado mournfully.
+“Jimmy,” he said pleadingly, “I hankers fer somethin’ tuh take my mind offen the cares an’ troubles of my exactin’ duties. I craves some hard likker, the kind that falls with a clatter an’ lands with a bang. I’m plumb meloncolic, that’s what. Don’t keep me in expense no longer.”
+The grinning bartender slid a bottle and glass across the battered “mahogany” and leaned his elbows upon the bar as he watched the fat deputy pour himself a drink.
+“I’ll betcha business is rushin’,” he agreed facetiously. “What all yuh been pesterin’ around at this bright mornin’?”
+“Collectin’ tacks.”")
+
+(define lines (regexp-split #px"\n" sample-text))
+
+
 (define LISTEN-PORT 8027)
 
 (define server-extra-files-path
@@ -153,15 +168,15 @@ substitution-map
 
 
 (define encryptors
-  (list (list "A" stars)
-        (list "B" swap-chars)
-        (list "C" pig-latin)
-        (list "D" middle-to-end)
-        (list "LA" flip-back)
-        (list "LB" vowel-swap)
-        (list "LC" fencepost)
-        (list "XA" scytale-4)
-        (list "XB" substitution-cipher)
+  (list (list "A" stars 0)
+        (list "B" swap-chars 1)
+        (list "C" pig-latin 2)
+        (list "D" middle-to-end 3)
+        (list "LA" flip-back 4)
+        (list "LB" vowel-swap 5)
+        (list "LC" fencepost 6)
+        (list "XA" scytale-4 7)
+        (list "XB" substitution-cipher 8)
         ))
 
 
@@ -172,6 +187,7 @@ substitution-map
   (match* (strs encryptor-strs)
     [((list str) (list encryptor-str))
      (define encryptor (cadr (assoc encryptor-str encryptors)))
+     (define encryptor-idx (caddr (assoc encryptor-str encryptors)))
      (with-handlers ([exn:fail?
                       (λ (exn)
                         `(div
@@ -179,7 +195,9 @@ substitution-map
                           (p "(Maybe go back and try again?)"))
                         )])
        (apply handle-bindings
-              (send/formlet (followup-formlet str (encryptor str) encryptor-str))))]
+              (send/formlet (followup-formlet str (encryptor str) encryptor-str
+                                              (encryptor
+                                               (list-ref lines encryptor-idx))))))]
     [(other other2)
      `(p "Internal Server Error 22732nth2412: ~a ~a" strs encryptor-strs)
      ]
@@ -216,6 +234,8 @@ substitution-map
               "21*i rtrx aoor-a gmo-mf ow-"))
 
 
+
+
 ;; the formlet that accepts a date
 (define initial-formlet
   (formlet* `(div
@@ -225,11 +245,13 @@ substitution-map
               )
             (list str encryptor)))
 
-(define (followup-formlet input-str encrypted-str encryptor)
+(define (followup-formlet input-str encrypted-str encryptor encrypted-challenge)
   (formlet* `(div
               (p ,(format "Chosen encryptor: ~a" encryptor))
               (p ,(format "Given string: ~a" input-str))
               (p ,(format "Encrypted string: ~a" encrypted-str) )
+              (p ,(format "Challenge string to be decrypted: ~a"
+                          encrypted-challenge))
               (p "Choose an encryptor: ",{(select-input (map car encryptors) #:selected? (λ (s) (equal? s encryptor))) . =>* . encryptor})
               (p "enter another string to be encoded: " ,{input-string . =>* . str})
               (p ,{(submit "go") . =>* . dc})
