@@ -10,11 +10,11 @@
 
 
 (define sample-text
-  "“Hello, Ducky, what’s yours?”
-The moon-faced deputy of Silver Springs waddled to the bar, hitched up his trousers, laid a sweat-stained sombrero upon the battered wood, and wiped his perspiring face before replying.
-No one looking at Ducky Drake’s pink and white features and well-padded form would have guessed him to be fifty-two years old, still less would they have imagined that here was the shrewdest and most feared man hunter in the region.
-His indolent, complacent manner masked a brain as keen and sure as a finely tempered blade, and his corpulent, slow-appearing body gave no indication of the surprising strength and agility the man possessed.
-Ducky returned his bandanna to his pocket and regarded the barkeeper in the Colorado mournfully.
+  "miasma
+mantelpiece
+largesse
+antediluvian
+whisker pole
 “Jimmy,” he said pleadingly, “I hankers fer somethin’ tuh take my mind offen the cares an’ troubles of my exactin’ duties. I craves some hard likker, the kind that falls with a clatter an’ lands with a bang. I’m plumb meloncolic, that’s what. Don’t keep me in expense no longer.”
 The grinning bartender slid a bottle and glass across the battered “mahogany” and leaned his elbows upon the bar as he watched the fat deputy pour himself a drink.
 “I’ll betcha business is rushin’,” he agreed facetiously. “What all yuh been pesterin’ around at this bright mornin’?”
