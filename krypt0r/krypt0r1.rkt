@@ -246,10 +246,14 @@ substitution-map
 
   (check-equal? 
    (un-substitution-cipher (substitution-cipher "well, I went down to the river today"))
-   "well, I went down to the river today"))
+   "well, I went down to the river today")
+
+  (check-equal?
+   (un-substitution-cipher "Rqyqvpq ir h uirs osho ir fqro rqxyqu mios nhxrbqg hvu whgdvvhirq.")
+   "Revenge is a dish that is best served with parsley and mayonnaise."))
 
 
-
+(substitution-cipher "Revenge is a dish that is best served with parsley and mayonnaise.")
 
 ;; the formlet that accepts a date
 (define initial-formlet
